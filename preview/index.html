@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ data.title }}</title>
+    <style>
+        body { font-family: sans-serif; }
+        table { border-collapse: collapse; width: 60%; margin-top: 20px; }
+        th, td { border: 1px solid #444; padding: 8px; text-align: left; }
+    </style>
+</head>
+<body>
+    <h1>{{ data.title }}</h1>
+    <p>お客様名: {{ data.name }}</p>
+
+    <table>
+        <tr>
+            <th>商品名</th>
+            <th>価格</th>
+        </tr>
+        {% for item in data["items"] %}
+        <tr>
+            <td>{{ item.name }}</td>
+            <td>{{ item.price }} 円</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

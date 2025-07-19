@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ data["title"] }}</title>
+    <style>
+        body { font-family: sans-serif; margin: 40px; }
+        h1 { font-size: 28px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #333; padding: 8px; text-align: left; }
+        .right { text-align: right; }
+        .button-area { margin-top: 30px; }
+    </style>
+</head>
+<body>
+    <h1>{{ data["title"] }}</h1>
+    <p>お名前：{{ data["name"] }}</p>
+
+    <table>
+        <tr>
+            <th>商品名</th>
+            <th class="right">価格</th>
+        </tr>
+        {% for item in data["items"] %}
+        <tr>
+            <td>{{ item["name"] }}</td>
+            <td class="right">{{ item["price"] }} 円</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <div class="button-area">
+        <form action="/generate_pdf" method="post">
+            <button type="submit">📄 PDFで出力する</button>
+        </form>
+    </div>
+</body>
+</html>
