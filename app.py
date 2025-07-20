@@ -5,7 +5,7 @@ app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "<h2>Welcome to Papyrus</h2>"
+    return "<h2>Welcome to Papyrus Master</h2>"
 
 @app.route("/index")
 def report():
