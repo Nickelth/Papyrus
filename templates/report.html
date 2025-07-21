@@ -7,7 +7,7 @@
 </head>
 <body>
     <h1>納　品　書</h1>
-    <p>お名前：{{ data["name"] }}</p>
+    <p>お名前：田中　太郎</p>
       <table class="info-table">
     <tr>
       <td>
@@ -29,7 +29,7 @@
   <p>下記の通り納品申し上げます。</p>
 
     <div class="total-box">
-    合計金額（税込）： ¥{{ "{:,.0f}".format(data.total) }}
+    合計金額（税込）： ¥{{ "{:,.0f}".format(total_sum) }}
   </div>
 
   <table class="item-table">
@@ -43,7 +43,7 @@
       </tr>
     </thead>
     <tbody>
-      {% for item in data["items"] %}
+      {% for item in delivery_list %}
       <tr>
         <td>{{ item.name }}</td>
         <td class="right">{{ item.qty }}</td>

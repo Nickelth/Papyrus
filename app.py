@@ -10,12 +10,13 @@ def home():
 
 @app.route("/index")
 def index():
-    form_data = {}
+    form_data = {} 
     return render_template("index.html", delivery_list=delivery_list, form_data=form_data)
 
 @app.route("/index", methods=["POST"])
 def handle_submit():
     global delivery_list
+    form_data = {}
     action = request.form.get("action")
     if action == "add":
         item = {
@@ -40,15 +41,10 @@ def handle_submit():
 
     return render_template("index.html", delivery_list=delivery_list, form_data=form_data)
 
-#def claer():
- #   return 0
-
-#def clearList():
-
-
 @app.route("/generate_pdf", methods=["POST"])
 def generate_pdf():
     # フォームから渡されたデータ
+    '''
     data = {
         "title": "納　品　書",
         "name": "田中 太郎",
@@ -63,9 +59,10 @@ def generate_pdf():
             {"name": "システムの操作説明　講習会", "qty": "40 個数", "unit_price": 4000, "total": 160000},
             {"name": "□□□の素材（××を含む）", "qty": "50 Kg", "unit_price": 5000, "total": 250000},
         ]
-    }
+    }'''
 
-    html = render_template("report.html", data=data)
+    total_sum = sum(item["total"] for item in delivery_list)
+    html = render_template("report.html", delivery_list=delivery_list, total_sum=total_sum)
     pdf = HTML(string=html).write_pdf(stylesheets=[CSS('static/style.css')])
 
     response = make_response(pdf)
