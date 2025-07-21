@@ -2,37 +2,57 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>{{ data["title"] }}</title>
-    <style>
-        body { font-family: sans-serif; margin: 40px; }
-        h1 { font-size: 28px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #333; padding: 8px; text-align: left; }
-        .right { text-align: right; }
-        .button-area { margin-top: 30px; }
-    </style>
+    <title>納　品　書</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <h1>{{ data["title"] }}</h1>
+    <h1>納　品　書</h1>
     <p>お名前：{{ data["name"] }}</p>
+      <table class="info-table">
+    <tr>
+      <td>
+        〒123-1234 東京都世田谷区〇〇〇1-2-3<br>
+        株式会社サンプル　〇〇支社<br>
+        営業部　担当者：△△　□□ 様
+      </td>
+      <td class="company-info">
+        No：123456-123<br>
+        発行日：2025/12/25<br><br>
+        株式会社 日本サンプル<br>
+        東京都杉並区〇〇1-2-3<br>
+        △△△ビル 1F 123<br>
+        03-1234-5678　info@japansample.com
+      </td>
+    </tr>
+  </table>
 
-    <table>
-        <tr>
-            <th>商品名</th>
-            <th class="right">価格</th>
-        </tr>
-        {% for item in data["items"] %}
-        <tr>
-            <td>{{ item["name"] }}</td>
-            <td class="right">{{ item["price"] }} 円</td>
-        </tr>
-        {% endfor %}
-    </table>
+  <p>下記の通り納品申し上げます。</p>
 
-    <div class="button-area">
-        <form action="/generate_pdf" method="post">
-            <button type="submit">📄 PDFで出力する</button>
-        </form>
-    </div>
+    <div class="total-box">
+    合計金額（税込）： ¥{{ "{:,.0f}".format(data.total) }}
+  </div>
+
+  <table class="item-table">
+    <thead>
+      <tr>
+        <th>商品名 / 品目</th>
+        <th class="right">数量</th>
+        <th class="right">単価</th>
+        <th class="right">金額</th>
+        <th>備考</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in data["items"] %}
+      <tr>
+        <td>{{ item.name }}</td>
+        <td class="right">{{ item.qty }}</td>
+        <td class="right">{{ "{:,.0f}".format(item.unit_price or 0) }}</td>
+        <td class="right">{{ "{:,.0f}".format(item.total or 0) }}</td>
+        <td>{{ item.note or '' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </body>
 </html>
