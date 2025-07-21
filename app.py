@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, make_response, render_template, request
+from flask import Flask, flash, jsonify, make_response, redirect, render_template, request
 from weasyprint import HTML, CSS
 from dotenv import load_dotenv
 import os
@@ -33,17 +33,29 @@ def handle_submit():
     form_data = {}
     action = request.form.get("action")
     if action == "add":
-        if not request.form["qty"].isdigit():
-            return "単価には整数を入力してください", 400
-        if not request.form["unit_price"].isdigit():
-            return "単価には整数を入力してください", 400
+        try:
+            sku = request.form["sku"].strip()
+            name = request.form["name"].strip()
+            qty = int(request.form["qty"])
+            unit_price = int(request.form["unit_price"])
+            note = request.form.get("note", "").strip()
+
+            if not sku or not name:
+                raise ValueError("商品コード・商品名は必須です")
+            if qty <= 0 or unit_price <= 0:
+                raise ValueError("数量・単価は1以上の数字を入力してください")
+
+        except (ValueError, KeyError) as e:
+            flash(str(e), "danger")
+            return redirect("/index")
+
         item = {
-            "sku": request.form["sku"],
-            "name": request.form["name"],
-            "qty": int(request.form["qty"]),
-            "unit_price": int(request.form["unit_price"]),
-            "total": int(request.form["unit_price"])*int(request.form["qty"]),
-            "note": request.form["note"]
+            "sku": sku,
+            "name": name,
+            "qty": qty,
+            "unit_price": unit_price,
+            "total": qty*unit_price,
+            "note": note
         }
         
         delivery_list.append(item)
