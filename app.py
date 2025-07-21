@@ -1,4 +1,4 @@
-from flask import Flask, make_response, render_template, request
+from flask import Flask, jsonify, make_response, render_template, request
 from weasyprint import HTML, CSS
 from dotenv import load_dotenv
 import os
@@ -6,12 +6,14 @@ import psycopg2
 
 load_dotenv()
 
-conn = psycopg2.connect(
-    dbname=os.getenv("DB_NAME"),
-    user=os.getenv("DB_USER"),
-    password=os.getenv("DB_PASSWORD"),
-    host=os.getenv("DB_HOST")
-)
+def get_conn():
+    return psycopg2.connect(
+        dbname=os.getenv("DB_NAME"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        host=os.getenv("DB_HOST"),
+        port=os.getenv("DB_PORT") or "5432"
+    )
 
 app = Flask(__name__)
 delivery_list = []
@@ -31,6 +33,10 @@ def handle_submit():
     form_data = {}
     action = request.form.get("action")
     if action == "add":
+        if not request.form["qty"].isdigit():
+            return "単価には整数を入力してください", 400
+        if not request.form["unit_price"].isdigit():
+            return "単価には整数を入力してください", 400
         item = {
             "sku": request.form["sku"],
             "name": request.form["name"],
@@ -39,6 +45,7 @@ def handle_submit():
             "total": int(request.form["unit_price"])*int(request.form["qty"]),
             "note": request.form["note"]
         }
+        
         delivery_list.append(item)
         form_data = {}
 
@@ -82,5 +89,42 @@ def generate_pdf():
     response.headers['Content-Disposition'] = 'inline; filename=invoice.pdf'
     return response
 
+@app.route("/api/product_by_sku")
+def product_by_sku():
+    sku = request.args.get("sku")
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT sku, name, unit_price FROM papyrus_schema.products WHERE sku = %s", (sku,))
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    if row:
+        return jsonify({"sku": row[0], "name": row[1], "unit_price": row[2]})
+    return jsonify({})
+
+
+@app.route("/api/product_by_name")
+def product_by_name():
+    sku = request.args.get("name")
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT sku, name, unit_price FROM papyrus_schema.products WHERE name = %s", (sku,))
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    if row:
+        return jsonify({"sku": row[0], "name": row[1], "unit_price": row[2]})
+    return jsonify({})
+
 if __name__ == "__main__":
+    try:
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute("SELECT 1")
+        print("DB Connection is available.")
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print("DB Connection is Failure:", e)
+
     app.run(debug=True)
