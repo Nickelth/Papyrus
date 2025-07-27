@@ -20,7 +20,7 @@ delivery_list = []
 
 @app.route("/")
 def home():
-    return "<h2>Welcome to Papyrus DEV</h2>"
+    return "<h2>Welcome to Papyrus</h2>"
 
 @app.route("/index")
 def index():
