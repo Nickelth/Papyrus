@@ -29,6 +29,24 @@ psql -U postgres -d papyrus_db -f init.sql
 
 ### 6. 起動方法
 ``` bash
-python app.py
+cd ~/papy
+python3 -m venv venv
+pip install -r requirements.txt
+source venv/bin/activate
+python run.py
 ```
 
+```plaintext
+your_project/
+├── run.py
+└── papyrus/
+    ├── __init__.py        ← Flaskアプリ本体ここにcreate_app()
+    ├── routes.py          ← @app.route群ここにまとめる（あとで）
+    ├── auth.py            ← Auth0用の処理（今のままでOK）
+    ├── templates/
+    ├── static/
+    ├── .env
+    └── run.py  
+
+
+```
