@@ -33,7 +33,7 @@ def handle_login():
 def handle_callback():
     token = auth0.authorize_access_token()
     session['user'] = token['userinfo']
-    return redirect('/dashboard')
+    return redirect('/index')
 
 def handle_logout():
     session.clear()

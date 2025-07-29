@@ -1,15 +1,17 @@
-from flask import Flask, flash, jsonify, make_response, redirect, render_template, request, session
-from papyrus.auth import init_auth, requires_auth, handle_login, handle_callback, handle_logout
+from flask import flash, make_response, redirect, render_template, request, session
+from papyrus.auth import requires_auth
 from weasyprint import HTML, CSS
-from dotenv import load_dotenv
-import os
-import psycopg2
-from flask import g
 
 def register_routes(app):
     @app.route("/")
     def home():
         return "<h2>Welcome to Papyrus</h2>"
+    
+    @app.route("/test-session")
+    def test_session():
+        session["foo"] = "bar"
+        return f"Session says: {session.get('foo')}"
+
 
     @app.route("/index", methods=["GET"])
     @requires_auth
