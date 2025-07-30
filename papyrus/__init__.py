@@ -9,8 +9,9 @@ import os
 
 load_dotenv()
 def create_app():
-    app = Flask(__name__, template_folder="../templates")
-    print("Template Folder is",app.template_folder)
+    BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+    TEMPLATE_DIR = os.path.join(BASE_DIR, '../templates')
+    app = Flask(__name__, template_folder=TEMPLATE_DIR)
     app.secret_key = os.getenv("FLASK_SECRET_KEY")
 
     init_auth(app)

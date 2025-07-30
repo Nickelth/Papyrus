@@ -6,12 +6,6 @@ def register_routes(app):
     @app.route("/")
     def home():
         return "<h2>Welcome to Papyrus</h2>"
-    
-    @app.route("/test-session")
-    def test_session():
-        session["foo"] = "bar"
-        return f"Session says: {session.get('foo')}"
-
 
     @app.route("/index", methods=["GET"])
     @requires_auth
