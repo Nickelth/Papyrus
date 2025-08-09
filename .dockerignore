@@ -1,4 +1,6 @@
 .env
+.env.*
+!.env.sample
 __pycache__/
 *.pyc
 *.pyo

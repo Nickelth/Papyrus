@@ -38,15 +38,18 @@ python run.py
 
 ```plaintext
 your_project/
+├── Dockerfile
+├── docker-compose.yml
 ├── run.py
+├── .env.dev
+├── .env.prd
 └── papyrus/
-    ├── __init__.py        ← Flaskアプリ本体ここにcreate_app()
-    ├── routes.py          ← @app.route群ここにまとめる（あとで）
-    ├── auth.py            ← Auth0用の処理（今のままでOK）
+    ├── __init__.py
+    ├── api_routes.py
+    ├── auth_routes.py
+    ├── auth.py
+    ├── db.py
+    ├── routes.py
     ├── templates/
-    ├── static/
-    ├── .env
-    └── run.py  
-
-
+    └── static/
 ```
