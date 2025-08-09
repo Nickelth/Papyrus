@@ -1,25 +1,53 @@
-version: "3.9"
 services:
   web:
     build: .
     ports:
       - "5000:5000"
-    env_file:
-      - .env
+    environment:
+      # アプリ側で使う追加ENV（必要なら）
+      AUTH0_CLIENT_ID: ${AUTH0_CLIENT_ID}
+      AUTH0_CLIENT_SECRET: ${AUTH0_CLIENT_SECRET}
+      AUTH0_DOMAIN: ${AUTH0_DOMAIN}
+      AUTH0_CALLBACK_URL: ${AUTH0_CALLBACK_URL}
+      FLASK_SECRET_KEY: ${FLASK_SECRET_KEY}
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      FLASK_ENV: ${FLASK_ENV:-development}
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
+      GUNICORN_THREADS: ${GUNICORN_THREADS:-4}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     volumes:
       - .:/app
+    command: >
+      gunicorn -b 0.0.0.x:5000 run:app
+      -w ${GUNICORN_WORKERS:-2}
+      --threads ${GUNICORN_THREADS:-2}
+      --timeout ${GUNICORN_TIMEOUT:-60}
+      --max-requests ${GUNICORN_MAX_REQUESTS:-200}
+      --max-requests-jitter ${GUNICORN_MAX_REQUESTS_JITTER:-50}
 
   db:
     image: postgres:16
+    # ホストでは15432でアクセス、コンテナ内では5432
+    ports:
+      - "15432:5432"
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
-      - pgdata:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
 volumes:
-  pgdata:
+  postgres_data:
