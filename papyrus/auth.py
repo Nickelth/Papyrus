@@ -28,7 +28,9 @@ def requires_auth(f):
     return decorated
 
 def handle_login():
-    return auth0.authorize_redirect()
+    return auth0.authorize_redirect(
+        redirect_uri=os.environ["AUTH0_CALLBACK_URL"]
+    )
 
 def handle_callback():
     token = auth0.authorize_access_token()
