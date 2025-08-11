@@ -1,6 +1,6 @@
 # .github/workflows/ecr-push.yml
 # Build Docker image and push to Amazon ECR on push to main and tags
-# Uses GitHub OIDC (recommended). Fallback using long-lived keys is commented below.
+# AWS secrets are stored in GitHub Secrets, non-sensitive constants in Repository Variables.
 
 name: Build & Push to ECR
 
@@ -20,9 +20,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  AWS_REGION: ${{ vars.AWS_REGION }}
-  AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
-  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }} # e.g., papyrus
+  AWS_REGION: ${{ vars.AWS_REGION }}            # Variables: safe to expose
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}    # Variables: safe to expose
   IMAGE_NAME: ${{ vars.ECR_REPOSITORY }}
 
 jobs:
@@ -38,7 +37,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ vars.AWS_IAM_ROLE_ARN }} # e.g., arn:aws:iam::123456789012:role/GitHubActionsECRPush
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }} # Secrets: sensitive
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
@@ -82,9 +81,8 @@ jobs:
           IMAGE_URI="${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}"
           echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT
 
-# --- Optional: Fallback using static access keys (NOT recommended) ---
+# --- Optional: Static keys fallback (NOT recommended) ---
 #      - name: Configure AWS credentials (static keys)
-#        if: ${{ !vars.AWS_IAM_ROLE_ARN }}
 #        uses: aws-actions/configure-aws-credentials@v4
 #        with:
 #          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
