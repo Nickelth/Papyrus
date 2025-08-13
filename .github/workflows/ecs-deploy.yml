@@ -1,0 +1,65 @@
+name: Deploy to ECS Fargate
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: ECR image tag to deploy (e.g., latest or a SHA)
+        required: true
+        default: latest
+      desired_count:
+        description: Desired task count for the service
+        required: true
+        default: '1'
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+  ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+  ECS_SERVICE: ${{ vars.ECS_SERVICE }}
+  CONTAINER_NAME: ${{ vars.CONTAINER_NAME }} # e.g., app
+  TASK_FAMILY: ${{ vars.TASK_FAMILY }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Ensure CloudWatch Log Group exists
+        run: |
+          aws logs create-log-group --log-group-name "/ecs/papyrus" --region "${{ env.AWS_REGION }}" 2>/dev/null || true
+          aws logs put-retention-policy --log-group-name "/ecs/papyrus" --retention-in-days 1 --region "${{ env.AWS_REGION }}"
+
+      - name: Login to Amazon ECR (for registry URI)
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Render task definition (inject image tag)
+        id: render
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: taskdef.json
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ inputs.image_tag }}
+
+      - name: Deploy to Amazon ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.render.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+          desired-count: ${{ inputs.desired_count }}
+          force-new-deployment: true
