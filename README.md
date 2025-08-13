@@ -124,8 +124,8 @@ ttl_cleanup
 
 2. Lambda環境変数をセット
 ```
-ECS_CLUSTER=papyrus-cluster
-ECS_SERVICES=papyrus-service
+ECS_CLUSTER=papyrus-cluster-prd
+ECS_SERVICE=papyrus-task-service
 RDS_INSTANCES=papyrus-db
 ECR_REPO=papyrus
 ECS_DESIRED=1
