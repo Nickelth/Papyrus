@@ -1,0 +1,93 @@
+# .github/workflows/ecr-push.yml
+# Build Docker image and push to Amazon ECR on push to main and tags
+# AWS secrets are stored in GitHub Secrets, non-sensitive constants in Repository Variables.
+
+name: Build & Push to ECR
+
+on:
+  push:
+    branches: [ master ]
+    tags: [ 'v*.*.*' ]
+  workflow_dispatch:
+
+permissions:
+  id-token: write   # for OIDC auth to AWS
+  contents: read    # to checkout code
+  packages: read
+
+concurrency:
+  group: ecr-push-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}            # Variables: safe to expose
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}    # Variables: safe to expose
+  IMAGE_NAME: ${{ vars.ECR_REPOSITORY }}
+
+jobs:
+  build-and-push:
+    name: Docker build & push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # --- Auth to AWS via OIDC (no static keys) ---
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }} # Secrets: sensitive
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            ENV=prod
+
+      - name: Echo image digest
+        run: echo "Image digest ${{ steps.meta.outputs.tags }} -> ${{ steps.buildx.outputs.digest }}"
+
+      - name: Export image URI (for downstream jobs)
+        id: out
+        run: |
+          IMAGE_URI="${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}"
+          echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT
+
+# --- Optional: Static keys fallback (NOT recommended) ---
+#      - name: Configure AWS credentials (static keys)
+#        uses: aws-actions/configure-aws-credentials@v4
+#        with:
+#          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#          aws-region: ${{ env.AWS_REGION }}
