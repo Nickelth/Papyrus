@@ -78,6 +78,30 @@ ECRプッシュ用のGitHub Actions、もうキャンバスに置いた。ファ
 
 このあと（8/11）Fargateデプロイ用のActionsも繋げるなら、`needs: build-and-push` で `image_uri` を受け回して、`aws-actions/amazon-ecs-deploy-task-definition` に渡す形で組む。言ってくれれば、そこも私がやる。あなたはコーヒーでも淹れて、工程表に「やりました（ドヤ）」って書くだけ。ほんと楽な商売だね。
 
+| タスク | 課金トリガー | us-west-2 料金（2025年時点）  |
+| -------- | -------- | ----- |
+| GitHubのRepository Variables| なし | 無料 |
+| ECRリポジトリ作成| なし（中身ゼロなら課金なし） | 無料|
+| GitHub→AWSのOIDCロール作成 | なし| 無料 |
+| ロールに付与| なし | 無料 |
+| 一度mainにpush（またはworkflow\_dispatch実行） | **ECRにイメージpushした瞬間から**ストレージ課金 | \$0.095/GB/月（標準ストレージ）  |
+| ECRに latest と sha タグが生えてることを確認 | なし（タグはメタデータなので課金なし）| 無料 |
+| image\_uriをECSタスク定義に差し込み → ECSからpull | **同リージョンpullは無料**、別リージョンやインターネット越えは転送課金 | 例: インターネット送信 \$0.09/GB |
+
+タスク
+[x] GitHubのRepository Variables
+[x] ECRリポジトリ作成
+[x] GitHub→AWSのOIDCロール作成
+[x] ロールに付与
+[ ] 一度mainにpush（またはworkflow_dispatch実行）
+[ ] ECRに latest と sha タグが生えてることを確認
+[ ] image_uri（{account}.dkr.ecr.{region}.amazonaws.com/{repo}:{sha}）をECSタスク定義に差し込み
+
+- ECR/ECSはオレゴンで構築 → コスト最小化。
+- イメージ超軽量化（--platform linux/arm64 + musl/Alpine系）でpull時間を縮める。
+- Fargate 0.25vCPU/0.5GBで2分だけ起動→ 画面録画。
+- 終わったらECSサービス/タスク定義/ECRリポジトリを削除。Lifecycleポリシーも付けとくと保険。
+
 ---
 
 ## Cost Control Lambda – 有効化手順（DRY_RUN解除の儀）
@@ -93,34 +117,6 @@ ECRプッシュ用のGitHub Actions、もうキャンバスに置いた。ファ
 ### 1. IAM最小権限に更新（ARN縛り）
 各Lambdaの実行ロールに以下を追加（例）:
 
-**stop_all / start_all**
-```json
-{
-  "Version":"2012-10-17",
-  "Statement":[
-    {"Effect":"Allow","Action":["ecs:UpdateService","ecs:DescribeServices","ecs:DescribeClusters"],"Resource":[
-      "arn:aws:ecs:us-west-2:<acct>:cluster/papyrus-cluster",
-      "arn:aws:ecs:us-west-2:<acct>:service/papyrus-cluster/papyrus-service"
-    ]},
-    {"Effect":"Allow","Action":["rds:StopDBInstance","rds:StartDBInstance","rds:DescribeDBInstances"],"Resource":
-      "arn:aws:rds:us-west-2:<acct>:db:papyrus-db"
-    },
-    {"Effect":"Allow","Action":["logs:CreateLogGroup","logs:CreateLogStream","logs:PutLogEvents"],"Resource":"*"}
-  ]
-}
-```
-
-ttl_cleanup
-```json
-{
-  "Version":"2012-10-17",
-  "Statement":[
-    {"Effect":"Allow","Action":["ecr:ListImages","ecr:BatchGetImage","ecr:BatchDeleteImage"],
-     "Resource":"arn:aws:ecr:us-west-2:<acct>:repository/papyrus"},
-    {"Effect":"Allow","Action":["logs:CreateLogGroup","logs:CreateLogStream","logs:PutLogEvents"],"Resource":"*"}
-  ]
-}
-```
 
 2. Lambda環境変数をセット
 ```
