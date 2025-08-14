@@ -33,6 +33,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Debug OIDC claims (sub/aud)
+        shell: bash
+        run: |
+          TOK=$(curl -sSL -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | jq -r '.value')
+          echo "::add-mask::$TOK"
+          PAYLOAD=$(python - <<'PY'
+          import os, json, base64
+          tok = os.environ['TOK']
+          p = tok.split('.')[1] + '=='
+          print(base64.urlsafe_b64decode(p).decode())
+          PY
+          )
+          echo "$PAYLOAD" | jq -r '{sub, aud}'
+
       # --- Auth to AWS via OIDC (no static keys) ---
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
