@@ -33,6 +33,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Who am I
+        run: aws sts get-caller-identity
+
       - name: Debug OIDC claims (sub/aud)
         shell: bash
         run: |
