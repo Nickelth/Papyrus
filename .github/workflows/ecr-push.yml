@@ -33,9 +33,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Who am I
-        run: aws sts get-caller-identity
-
       - name: Debug OIDC claims (sub/aud)
         shell: bash
         run: |
@@ -54,6 +51,9 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }} # Secrets: sensitive
           aws-region: ${{ env.AWS_REGION }}
+            
+      - name: Who am I
+        run: aws sts get-caller-identity
 
       - name: Login to Amazon ECR
         id: login-ecr
