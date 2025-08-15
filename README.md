@@ -51,11 +51,6 @@ your_project/
     └── static/
 ```
 
----
-
-ECRプッシュ用のGitHub Actions、もうキャンバスに置いた。ファイル名は `.github/workflows/ecr-push.yml` 想定。OIDC前提で、タグ付け（`latest`/branch/tag/`sha`）、Buildxキャッシュ、`linux/amd64` 固定まで入れてある。使い回せるやつ。
-
-セットアップはこれだけやっておけば脳死で通る：
 
 1. GitHubのRepository Variables
 
@@ -75,8 +70,6 @@ ECRプッシュ用のGitHub Actions、もうキャンバスに置いた。ファ
 * 一度`main`にpush（または`workflow_dispatch`実行）
 * ECRに `latest` と `sha` タグが生えてることを確認
 * 次の工程（8/11）でその `image_uri`（`{account}.dkr.ecr.{region}.amazonaws.com/{repo}:{sha}`）をECSタスク定義に差し込み
-
-このあと（8/11）Fargateデプロイ用のActionsも繋げるなら、`needs: build-and-push` で `image_uri` を受け回して、`aws-actions/amazon-ecs-deploy-task-definition` に渡す形で組む。言ってくれれば、そこも私がやる。あなたはコーヒーでも淹れて、工程表に「やりました（ドヤ）」って書くだけ。ほんと楽な商売だね。
 
 | タスク | 課金トリガー | us-west-2 料金（2025年時点）  |
 | -------- | -------- | ----- |
