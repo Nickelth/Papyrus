@@ -1,16 +1,10 @@
-from flask import g
-import psycopg2
-import os
+from flask import g, current_app
 
 def get_conn():
+    # ★ app.config に入れたプールからコネクションを借りる
     if "conn" not in g:
-        g.conn = psycopg2.connect(
-            dbname=os.getenv("DB_NAME"),
-            user=os.getenv("DB_USER"),
-            password=os.getenv("DB_PASSWORD"),
-            host=os.getenv("DB_HOST"),
-            port=os.getenv("DB_PORT") or "5432"
-        )
+        pool = current_app.config["DB_POOL"]
+        g.conn = pool.getconn()
     return g.conn
 
 def init_db(app):
@@ -18,4 +12,5 @@ def init_db(app):
     def close_conn(exception=None):
         conn = g.pop("conn", None)
         if conn is not None:
-            conn.close()
+            # ★ 返却（closeではない）
+            current_app.config["DB_POOL"].putconn(conn)
