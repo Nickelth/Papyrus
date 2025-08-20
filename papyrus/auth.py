@@ -1,4 +1,4 @@
-from flask import session, redirect, url_for, request
+from flask import session, redirect, url_for, request, current_app
 from authlib.integrations.flask_client import OAuth
 from functools import wraps
 import os
@@ -7,16 +7,17 @@ oauth = OAuth()
 auth0 = None
 
 def init_auth(app):
-    app.secret_key = os.environ['FLASK_SECRET_KEY']
+    # ★ __init__.py ですでに app.secret_key 設定済み
+    cfg = app.config["APP_CFG"]
     oauth.init_app(app)
     global auth0
     auth0 = oauth.register(
         'auth0',
-        client_id=os.environ['AUTH0_CLIENT_ID'],
-        client_secret=os.environ['AUTH0_CLIENT_SECRET'],
+        client_id=cfg.auth0.client_id,
+        client_secret=cfg.auth0.client_secret,
         client_kwargs={'scope': 'openid profile email'},
-        server_metadata_url=f'https://{os.environ["AUTH0_DOMAIN"]}/.well-known/openid-configuration',
-        redirect_uri=os.environ['AUTH0_CALLBACK_URL']
+        server_metadata_url=f'https://{cfg.auth0.domain}/.well-known/openid-configuration',
+        redirect_uri=cfg.auth0.callback_url
     )
 
 def requires_auth(f):
@@ -28,9 +29,8 @@ def requires_auth(f):
     return decorated
 
 def handle_login():
-    return auth0.authorize_redirect(
-        redirect_uri=os.environ["AUTH0_CALLBACK_URL"]
-    )
+    cfg = current_app.config["APP_CFG"]
+    return auth0.authorize_redirect(redirect_uri=cfg.auth0.callback_url)
 
 def handle_callback():
     token = auth0.authorize_access_token()
@@ -39,6 +39,7 @@ def handle_callback():
 
 def handle_logout():
     session.clear()
+    cfg = current_app.config["APP_CFG"]
     return redirect(
-        f'https://{os.environ["AUTH0_DOMAIN"]}/v2/logout?returnTo={url_for("home", _external=True)}&client_id={os.environ["AUTH0_CLIENT_ID"]}'
+        f'https://{cfg.auth0.domain}/v2/logout?returnTo={url_for("home", _external=True)}&client_id={cfg.auth0.client_id}'
     )
