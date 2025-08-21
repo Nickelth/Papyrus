@@ -1,4 +1,7 @@
 
+
+### ディレクトリ構成
+
 ```plaintext
 your_project/
 ├── Dockerfile
@@ -13,7 +16,13 @@ your_project/
     ├── auth.py
     ├── db.py
     ├── routes.py
+    ├── config_runtime.py
     ├── templates/
     └── static/
 ```
 
+### 開発環境起動時
+
+```bash
+docker compose --env-file .env.dev build --no-cache --progress=plain
+```
