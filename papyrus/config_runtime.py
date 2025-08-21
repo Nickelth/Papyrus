@@ -22,11 +22,11 @@ Environment contract:
     CONFIG_BACKEND=env|aws                  # explicit override (optional)
     AWS_REGION=ap-northeast-1               # or your region
     # Secrets Manager IDs (prd)
-    DB_SECRET_ID=myapp/prd/db
-    AUTH0_SECRET_ID=myapp/prd/auth0
-    FLASK_SECRET_ID=myapp/prd/flask
+    DB_SECRET_ID=papyrus/prd/db
+    AUTH0_SECRET_ID=papyrus/prd/auth0
+    FLASK_SECRET_ID=papyrus/prd/flask
     # SSM parameters (prd)
-    SSM_AUTH0_CALLBACK=/myapp/prd/auth0/callback_url
+    SSM_AUTH0_CALLBACK=/papyrus/prd/auth0/callback_url
 
     # Optional tuning
     SECRET_CACHE_TTL=300     # seconds
@@ -185,16 +185,16 @@ class AWSProvider:
         return val
 
     def load(self) -> AppConfig:
-        db_secret_id = os.getenv("DB_SECRET_ID", "myapp/prd/db")
-        auth0_secret_id = os.getenv("AUTH0_SECRET_ID", "myapp/prd/auth0")
-        flask_secret_id = os.getenv("FLASK_SECRET_ID", "myapp/prd/flask")
+        db_secret_id = os.getenv("DB_SECRET_ID", "papyrus/prd/db")
+        auth0_secret_id = os.getenv("AUTH0_SECRET_ID", "papyrus/prd/auth0")
+        flask_secret_id = os.getenv("FLASK_SECRET_ID", "papyrus/prd/flask")
 
         dbj = self._secret(db_secret_id)
         auth0j = self._secret(auth0_secret_id)
         flaskj = self._secret(flask_secret_id)
 
         # SSM for non-secret config (e.g., callback URL)
-        cb_param = os.getenv("SSM_AUTH0_CALLBACK", "/myapp/prd/auth0/callback_url")
+        cb_param = os.getenv("SSM_AUTH0_CALLBACK", "/papyrus/prd/auth0/callback_url")
         callback_url = self._get_ssm_param(cb_param, with_decryption=True)
 
         db = DBConfig(
