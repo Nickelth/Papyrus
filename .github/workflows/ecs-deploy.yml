@@ -37,10 +37,7 @@ jobs:
           role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Ensure CloudWatch Log Group exists
-        run: |
-          aws logs create-log-group --log-group-name "/ecs/papyrus" --region "${{ env.AWS_REGION }}" 2>/dev/null || true
-          aws logs put-retention-policy --log-group-name "/ecs/papyrus" --retention-in-days 1 --region "${{ env.AWS_REGION }}"
+      # log group is pre-created; streams are created by ecsTaskExecutionRole
 
       - name: Login to Amazon ECR (for registry URI)
         id: login-ecr
