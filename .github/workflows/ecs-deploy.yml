@@ -39,6 +39,14 @@ jobs:
 
       # log group is pre-created; streams are created by ecsTaskExecutionRole
 
+      - name: Fetch current task definition from ECS
+        run: |
+          aws ecs describe-task-definition --task-definition "${{ env.TASK_FAMILY }}" \
+            --query taskDefinition > taskdef.json
+          jq -r '.containerDefinitions[].name' taskdef.json  # デバッグ：存在確認
+
+      - run: ls -la; test -f taskdef.json && echo "found taskdef.json" || echo "missing"
+
       - name: Login to Amazon ECR (for registry URI)
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
