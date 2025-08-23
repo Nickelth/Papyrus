@@ -39,6 +39,9 @@ jobs:
 
       # log group is pre-created; streams are created by ecsTaskExecutionRole
 
+      - name: Who am I
+        run: aws sts get-caller-identity
+
       - name: Fetch current task definition from ECS
         run: |
           aws ecs describe-task-definition --task-definition "${{ env.TASK_FAMILY }}" \
