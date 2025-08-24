@@ -26,7 +26,7 @@ Environment contract:
     AUTH0_SECRET_ID=papyrus/prd/auth0
     FLASK_SECRET_ID=papyrus/prd/flask
     # SSM parameters (prd)
-    SSM_AUTH0_CALLBACK=/papyrus/prd/auth0/callback_url
+    AUTH0_CALLBACK=/papyrus/prd/auth0/callback_url
 
     # Optional tuning
     SECRET_CACHE_TTL=300     # seconds
@@ -195,7 +195,7 @@ class AWSProvider:
         flaskj = self._secret(flask_secret_id)
 
         # SSM for non-secret config (e.g., callback URL)
-        cb_param = os.getenv("SSM_AUTH0_CALLBACK", "/papyrus/prd/auth0/callback_url")
+        cb_param = os.getenv("AUTH0_CALLBACK", "/papyrus/prd/auth0/callback_url")
         callback_url = self._get_ssm_param(cb_param, with_decryption=True)
 
         db = DBConfig(
