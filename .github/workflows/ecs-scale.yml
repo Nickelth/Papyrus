@@ -31,5 +31,5 @@ jobs:
         run: |
           aws ecs update-service \
             --cluster "$ECS_CLUSTER" \
-            --service "ECS_SERVICE" \
+            --service "$ECS_SERVICE" \
             --desired-count "${{ inputs.count }}"
