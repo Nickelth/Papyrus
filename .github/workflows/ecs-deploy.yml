@@ -54,6 +54,17 @@ jobs:
           echo "clusterArn=$CARN" >> $GITHUB_OUTPUT
           echo "serviceArn=$SARN" >> $GITHUB_OUTPUT
 
+      - name: "Fetch current task definition into workspace"
+        run: |
+          # デバッグ：ECSからタスク定義を抽出
+          aws ecs describe-task-definition \
+            --task-definition "${{ env.TASK_FAMILY }}" \
+            --query taskDefinition > taskdef.json
+          # デバッグ：ちゃんと取れたか
+          test -s taskdef.json || (echo "::error::taskdef.json missing"; exit 1)
+          jq -r '.family, .containerDefinitions[].name' taskdef.json
+
+
       - name: Login to Amazon ECR (for registry URI)
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
