@@ -176,6 +176,7 @@ class AWSProvider:
 
     # --- SSM helpers ---
     def _get_ssm_param(self, name: str, with_decryption: bool = True) -> str:
+        print(f"[cfg] fetching SSM param: {name}", flush=True)
         cached = self._ssm_cache.get(name)
         if cached is not None:
             return cached
