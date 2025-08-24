@@ -26,61 +26,10 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
-
-      # 可視化＆トリム（事故予防）
-      - name: Sanity + trim
-        id: vars
-        shell: bash
-        run: |
-          set -euo pipefail
-          CLUSTER="$(printf "%s" "${{ env.ECS_CLUSTER }}" | tr -d '\r' | xargs)"
-          SERVICE="$(printf "%s" "${{ env.ECS_SERVICE }}" | tr -d '\r' | xargs)"
-          printf 'ECS_CLUSTER=[%s]\nECS_SERVICE=[%s]\n' "$CLUSTER" "$SERVICE"
-          echo "cluster=$CLUSTER" >> $GITHUB_OUTPUT
-          echo "service=$SERVICE" >> $GITHUB_OUTPUT
-
-      # サービスが無ければ成功扱いで終了（GUIで消した後の実行に備える）
-      - name: "Preflight: service exists?"
-        id: pre
-        continue-on-error: true
-        run: |
-          aws ecs describe-services \
-            --cluster "${{ steps.vars.outputs.cluster }}" \
-            --services "${{ steps.vars.outputs.service }}" \
-            --query 'services[0].serviceArn' --output text
-
-      - name: Bail out if missing
-        if: steps.pre.outcome == 'failure'
-        run: echo "Service not found. Nothing to scale. Exiting 0."
       
       - name: Update desired count
-        if: steps.pre.outcome == 'success'
         run: |
           aws ecs update-service \
-            --cluster "${{ steps.vars.outputs.cluster }}" \
-            --service "${{ steps.vars.outputs.service }}" \
+            --cluster "$ECS_CLUSTER" \
+            --service "ECS_SERVICE" \
             --desired-count "${{ inputs.count }}"
-
-      # 起動するケース：安定化まで待つ
-      - name: Wait until services stable
-        if: steps.pre.outcome == 'success' && inputs.count != '0'
-        run: |
-          aws ecs wait services-stable \
-            --cluster "${{ steps.vars.outputs.cluster }}" \
-            --services "${{ steps.vars.outputs.service }}"
-
-      # 停止するケース：runningCount=0 を軽く待つ（30回×10秒=5分）
-      - name: Wait runningCount=0
-        if: steps.pre.outcome == 'success' && inputs.count == '0'
-        shell: bash
-        run: |
-          for i in {1..30}; do
-            RUN=$(aws ecs describe-services \
-              --cluster "${{ steps.vars.outputs.cluster }}" \
-              --services "${{ steps.vars.outputs.service }}" \
-              --query 'services[0].runningCount' --output text)
-            echo "runningCount=$RUN"
-            [ "$RUN" = "0" ] && exit 0
-            sleep 10
-          done
-          echo "::warning::Timed out waiting for runningCount=0"
