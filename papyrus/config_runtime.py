@@ -150,7 +150,7 @@ class AWSProvider:
         ttl = int(os.getenv("SECRET_CACHE_TTL", 300))
         if SecretCache:
             self.cache = SecretCache(  # type: ignore
-                config=SecretCacheConfig(max_cache_size=1024, max_cache_item_ttl=ttl),
+                config=SecretCacheConfig(max_cache_size=1024),
                 client=self.sm,
             )
             self._secret = self._secret_with_lib
