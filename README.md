@@ -42,16 +42,16 @@ docker compose --env-file .env.dev build --no-cache --progress=plain
 
 ### 完成定義
 
-[ ] **ECS→RDS の疎通 OK**（INSERT 0 1 が証跡に残る） 
+- [ ] **ECS→RDS の疎通 OK**（INSERT 0 1 が証跡に残る） 
 
-[ ] **最小スキーマ適用済み**（schema.sql 投入） 
+- [ ] **最小スキーマ適用済み**（schema.sql 投入） 
 
-[ ] **観測の入口**として CloudWatch Logs に構造化ログが出ている（JSON1行） 
+- [ ] **観測の入口**として CloudWatch Logs に構造化ログが出ている（JSON1行） 
 
-[ ] **IaC 薄切り**（RDS/SG/ParameterGroup だけTerraform化。完全Importは後回し） 
+- [ ] **IaC 薄切り**（RDS/SG/ParameterGroup だけTerraform化。完全Importは後回し） 
 
-[ ] **証跡**：psql 接続ログ、SG設定SS、アプリログに接続成功 
+- [ ] **証跡**：psql 接続ログ、SG設定SS、アプリログに接続成功 
 
-[ ] **Parameter Group変更の反映証跡**(再起動含む)、トランザクションのログ1件、再試行ロジックの有無 
+- [ ] **Parameter Group変更の反映証跡**(再起動含む)、トランザクションのログ1件、再試行ロジックの有無 
 
-[ ] **CLI履歴の証跡化**: scriptコマンドかbash -xログ、加えてCloudTrail + Configを記事に添える
+- [ ] **CLI履歴の証跡化**: scriptコマンドかbash -xログ、加えてCloudTrail + Configを記事に添える
