@@ -37,10 +37,33 @@ jobs:
           role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Ensure CloudWatch Log Group exists
+      - name: "Preflight: resolve ECS ARNs"
+        id: arns
         run: |
-          aws logs create-log-group --log-group-name "/ecs/papyrus" --region "${{ env.AWS_REGION }}" 2>/dev/null || true
-          aws logs put-retention-policy --log-group-name "/ecs/papyrus" --retention-in-days 1 --region "${{ env.AWS_REGION }}"
+          set -e
+          CLUSTER="${{ env.ECS_CLUSTER }}"
+          SERVICE="${{ env.ECS_SERVICE }}"
+          CARN=$(aws ecs describe-clusters --clusters "$CLUSTER" \
+            --query 'clusters[0].clusterArn' --output text)
+          if [ -z "$CARN" ] || [ "$CARN" = "None" ]; then
+            echo "::error::Cluster '$CLUSTER' not found in ${{ env.AWS_REGION }}"; exit 1; fi
+          SARN=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" \
+            --query 'services[0].serviceArn' --output text)
+          if [ -z "$SARN" ] || [ "$SARN" = "None" ]; then
+            echo "::error::Service '$SERVICE' not found in cluster '$CLUSTER'"; exit 1; fi
+          echo "clusterArn=$CARN" >> $GITHUB_OUTPUT
+          echo "serviceArn=$SARN" >> $GITHUB_OUTPUT
+
+      - name: "Fetch current task definition into workspace"
+        run: |
+          # デバッグ：ECSからタスク定義を抽出
+          aws ecs describe-task-definition \
+            --task-definition "${{ env.TASK_FAMILY }}" \
+            --query taskDefinition > taskdef.json
+          # デバッグ：ちゃんと取れたか
+          test -s taskdef.json || (echo "::error::taskdef.json missing"; exit 1)
+          jq -r '.family, .containerDefinitions[].name' taskdef.json
+
 
       - name: Login to Amazon ECR (for registry URI)
         id: login-ecr
@@ -59,7 +82,7 @@ jobs:
         with:
           task-definition: ${{ steps.render.outputs.task-definition }}
           service: ${{ env.ECS_SERVICE }}
-          cluster: ${{ env.ECS_CLUSTER }}
+          cluster: ${{ steps.arns.outputs.clusterArn }}
           wait-for-service-stability: true
           desired-count: ${{ inputs.desired_count }}
           force-new-deployment: true
