@@ -1,7 +1,7 @@
 locals {
   tags = {
     Project = var.name_prefix
-    Env     = "dev"
+    Env     = "master"
     Owner   = "self"
   }
 }
@@ -44,7 +44,7 @@ resource "aws_db_parameter_group" "pg" {
 }
 
 resource "aws_db_instance" "this" {
-  identifier                 = "${var.name_prefix}-pg16-dev"
+  identifier                 = "${var.name_prefix}-pg16-master"
   engine                     = "postgres"
   engine_version             = "16"
   instance_class             = "db.t4g.micro"
