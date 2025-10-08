@@ -25,7 +25,7 @@ resource "aws_vpc_security_group_ingress_rule" "from_tasks_5432" {
   ip_protocol                  = "tcp"
   from_port                    = 5432
   to_port                      = 5432
-  description                  = "ECS tasks -> RDS 5432"
+  description                  = "ECS_tasks_to_RDS_5432"
 }
 
 resource "aws_db_parameter_group" "pg" {
@@ -55,6 +55,7 @@ resource "aws_db_instance" "this" {
   db_subnet_group_name       = aws_db_subnet_group.this.name
   vpc_security_group_ids     = [aws_security_group.rds.id]
   parameter_group_name       = aws_db_parameter_group.pg.name
+  depends_on                 = [aws_db_parameter_group.pg]
 
   storage_encrypted          = true
   publicly_accessible        = false
