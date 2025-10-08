@@ -25,7 +25,7 @@ resource "aws_vpc_security_group_ingress_rule" "from_tasks_5432" {
   ip_protocol                  = "tcp"
   from_port                    = 5432
   to_port                      = 5432
-  description                  = "ECS tasks -> RDS 5432"
+  description                  = "ECS_tasks_to_RDS_5432"
 }
 
 resource "aws_db_parameter_group" "pg" {
