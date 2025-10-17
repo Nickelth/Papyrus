@@ -44,26 +44,26 @@ resource "aws_db_parameter_group" "pg" {
 }
 
 resource "aws_db_instance" "this" {
-  identifier                 = "${var.name_prefix}-pg16-dev"
-  engine                     = "postgres"
-  engine_version             = "16"
-  instance_class             = "db.t4g.micro"
-  allocated_storage          = 20
-  db_name                    = "papyrus"
-  username                   = var.db_username
-  password                   = var.db_password
-  db_subnet_group_name       = aws_db_subnet_group.this.name
-  vpc_security_group_ids     = [aws_security_group.rds.id]
-  parameter_group_name       = aws_db_parameter_group.pg.name
-  depends_on                 = [aws_db_parameter_group.pg]
+  identifier             = "${var.name_prefix}-pg16-dev"
+  engine                 = "postgres"
+  engine_version         = "16"
+  instance_class         = "db.t4g.micro"
+  allocated_storage      = 20
+  db_name                = "papyrus"
+  username               = var.db_username
+  password               = var.db_password
+  db_subnet_group_name   = aws_db_subnet_group.this.name
+  vpc_security_group_ids = [aws_security_group.rds.id]
+  parameter_group_name   = aws_db_parameter_group.pg.name
+  depends_on             = [aws_db_parameter_group.pg]
 
-  storage_encrypted          = true
-  publicly_accessible        = false
-  multi_az                   = false
-  backup_retention_period    = 1
-  deletion_protection        = false
-  skip_final_snapshot        = true
+  storage_encrypted       = true
+  publicly_accessible     = false
+  multi_az                = false
+  backup_retention_period = 1
+  deletion_protection     = false
+  skip_final_snapshot     = true
 
-  apply_immediately          = true
-  tags                       = local.tags
+  apply_immediately = true
+  tags              = local.tags
 }
