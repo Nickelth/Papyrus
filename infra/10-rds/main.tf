@@ -57,13 +57,13 @@ resource "aws_db_instance" "this" {
   parameter_group_name       = aws_db_parameter_group.pg.name
   depends_on                 = [aws_db_parameter_group.pg]
 
-  storage_encrypted          = true
-  publicly_accessible        = false
-  multi_az                   = false
-  backup_retention_period    = 1
-  deletion_protection        = false
-  skip_final_snapshot        = true
+  storage_encrypted       = true
+  publicly_accessible     = false
+  multi_az                = false
+  backup_retention_period = 1
+  deletion_protection     = false
+  skip_final_snapshot     = true
 
-  apply_immediately          = true
-  tags                       = local.tags
+  apply_immediately = true
+  tags              = local.tags
 }
