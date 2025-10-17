@@ -1,0 +1,177 @@
+{
+  "version": 4,
+  "terraform_version": "1.13.2",
+  "serial": 13,
+  "lineage": "b2bb335a-0cf3-10a9-d6b7-40d5a58d4700",
+  "outputs": {},
+  "resources": [
+    {
+      "mode": "managed",
+      "type": "aws_db_parameter_group",
+      "name": "pg",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:rds:us-west-1:<ACCOUNT_ID>:pg:papyrus-pg16-min",
+            "description": "Managed by Terraform",
+            "family": "postgres16",
+            "id": "papyrus-pg16-min",
+            "name": "papyrus-pg16-min",
+            "name_prefix": "",
+            "parameter": [
+              {
+                "apply_method": "immediate",
+                "name": "log_connections",
+                "value": "1"
+              },
+              {
+                "apply_method": "immediate",
+                "name": "log_min_duration_statement",
+                "value": "500"
+              }
+            ],
+            "region": "us-west-1",
+            "skip_destroy": false,
+            "tags": {
+              "Env": "dev",
+              "Owner": "self",
+              "Project": "papyrus"
+            },
+            "tags_all": {
+              "Env": "dev",
+              "Owner": "self",
+              "Project": "papyrus"
+            }
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA=="
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_db_subnet_group",
+      "name": "this",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:rds:us-west-2:<ACCOUNT_ID>:subgrp:papyrus-rds-subnet",
+            "description": "Managed by Terraform",
+            "id": "papyrus-rds-subnet",
+            "name": "papyrus-rds-subnet",
+            "name_prefix": "",
+            "region": "us-west-2",
+            "subnet_ids": [
+              "<subnet-id>",
+              "<subnet-id>"
+            ],
+            "supported_network_types": [
+              "IPV4"
+            ],
+            "tags": {
+              "Env": "dev",
+              "Owner": "self",
+              "Project": "papyrus"
+            },
+            "tags_all": {
+              "Env": "dev",
+              "Owner": "self",
+              "Project": "papyrus"
+            },
+            "vpc_id": "<vpc-id>"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA=="
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_security_group",
+      "name": "rds",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "arn": "arn:aws:ec2:us-west-2:<ACCOUNT_ID>:security-group/<sg-id>",
+            "description": "Ingress 5432 from ECS tasks SG only",
+            "egress": [],
+            "id": "<sg-id>",
+            "ingress": [],
+            "name": "papyrus-rds-sg",
+            "name_prefix": "",
+            "owner_id": "<ACCOUNT_ID>",
+            "region": "us-west-2",
+            "revoke_rules_on_delete": false,
+            "tags": {
+              "Env": "dev",
+              "Owner": "self",
+              "Project": "papyrus"
+            },
+            "tags_all": {
+              "Env": "dev",
+              "Owner": "self",
+              "Project": "papyrus"
+            },
+            "timeouts": null,
+            "vpc_id": "<vpc-id>"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "identity": {
+            "account_id": "<ACCOUNT_ID>",
+            "id": "<sg-id>",
+            "region": "us-west-2"
+          },
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6OTAwMDAwMDAwMDAwfSwic2NoZW1hX3ZlcnNpb24iOiIxIn0="
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_vpc_security_group_ingress_rule",
+      "name": "from_tasks_5432",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ec2:us-west-2:<ACCOUNT_ID>:security-group-rule/sgr-0cf1be2d3ddbcca5a",
+            "cidr_ipv4": null,
+            "cidr_ipv6": null,
+            "description": "ECS_tasks_to_RDS_5432",
+            "from_port": 5432,
+            "id": "sgr-0cf1be2d3ddbcca5a",
+            "ip_protocol": "tcp",
+            "prefix_list_id": null,
+            "referenced_security_group_id": "<sg-id>",
+            "region": "us-west-2",
+            "security_group_id": "<sg-id>",
+            "security_group_rule_id": "sgr-0cf1be2d3ddbcca5a",
+            "tags": null,
+            "tags_all": {},
+            "to_port": 5432
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "identity": {
+            "account_id": "<ACCOUNT_ID>",
+            "id": "sgr-0cf1be2d3ddbcca5a",
+            "region": "us-west-2"
+          },
+          "dependencies": [
+            "aws_security_group.rds"
+          ]
+        }
+      ]
+    }
+  ],
+  "check_results": null
+}
