@@ -2,7 +2,8 @@
 
 ### 目的
 
-Papyrus の RDS スキーマを安全に投入し、アプリ/CLIの二系統で INSERT 0 1 を証跡化する。SSL必須・最小SGを維持したまま運用可能状態に上げる。
+1. Papyrus の RDS スキーマを安全に投入し、アプリ/CLIの二系統で INSERT 0 1 を証跡化する。SSL必須・最小SGを維持したまま運用可能状態に上げる。
+2. Papyrus のアプリ改修と再デプロイを通し、ECS/Fargate 上で /dbcheck を有効化。イメージを digest 固定で差し替え、ECS Exec を有効化したうえでルーティングを実機確認する。
 
 ### 主要変更
 
@@ -11,24 +12,43 @@ Papyrus の RDS スキーマを安全に投入し、アプリ/CLIの二系統で
   - CLI系: psycopg2 直で SKU-CLI を挿入
   - アプリ経由: 暫定 /dbcheck で SKU-APP を挿入
 - RDS SG は 5432 inbound を ECSタスクSGのみ に統一（重複SG整理済）
+- `papyrus/routes.py` と名前衝突しないよう `papyrus/blueprints/dbcheck.py` に移動、`__init__.py` で Blueprint 登録。
+- 実行中タスクに対し Exec で URL マップ確認。`/dbcheck` ルートの搭載を確認。
 
 ### 証跡
 
 - *_schema_dryrun_exec.log, *_schema_apply_exec.log
 - *_papyrus_psql_insert_cli.log, *_papyrus_psql_insert_app.log
-- *_rds_sg_inbound_after.json（最終形）
+- *_rds_sg_inbound_after.json
+- 実行中イメージ
+  - *_running_image.log
+- URLマップ
+  - *_flask_url_map_after.log
+- /dbcheck 叩き込みログ（prefix 探査スクリプト込み）
+  - *_papyrus_psql_insert_app.log
+- サービス更新・安定待ち関連（必要に応じて script ログに追記）
 
 ### ロールアウト
 
-- us-west-2、サービス papyrus-task-service。外部公開無し、影響はタスク1本のみ。
+- `us-west-2`、サービス `papyrus-task-service`。外部公開無し、影響はタスク1本のみ。
 - 認証は OIDC。Secrets papyrus/prd/db は RDS 実体と整合済み（host/port/user/dbname/password）。
+- タスク定義: `papyrus-task:39` をサービス `papyrus-task-service` に適用済み。
+- サービス状態: Desired=1 / Running=1 まで復旧。
+- ALB 経由のヘルスチェックは未設定だが、アプリは `0.0.0.0:5000` で稼働し、`/dbcheck` が URL マップに載っていることを Exec で確認済み。
 
 ### 残課題
 
 - [ ] /healthz を軽量実装して将来の ALB/TG ヘルスに流用
+- [ ] /dbcheck の 200 実測とレスポンス保存(今日は URL マップまで。次回、/dbcheck 実行で 200 と JSON をログに残す)
+- [ ] CI の安全策
+  - [ ] コンテナ起動前テスト: python -c "from papyrus import create_app; a=create_app(); print([r.rule for r in a.url_map.iter_rules()])" を CI で回し、/dbcheck の存在を検知。
+  - [ ] ECS Exec 有効 のサービス設定 drift チェックを IaC 側に。
 - [ ] PGSSLMODE=require をタスク定義で恒久化、可能なら sslrootcert 検証まで
 - [ ] CI プリフライト: Secrets と RDS 実体の diff、RDS エンドポイント変更検知
 - [ ] CloudWatch Alarm（ECSメモリ/CPU、将来のALB 5xx/応答遅延）
+  - [ ] 退出コード異常（Exit 3 など）と起動失敗の CloudWatch アラームを追加。
+- [ ] RDS 初期化フローの二段化
+  - 既存の init.sql は本番データ扱い。DRYRUN と本適用をスクリプトで明確に分離し、Evidence を自動保存。
 
 
 ## 2025-10-08 → 2025-10-17
