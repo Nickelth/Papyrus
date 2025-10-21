@@ -1,3 +1,35 @@
+## 2025-10-21
+
+### 目的
+
+Papyrus の RDS スキーマを安全に投入し、アプリ/CLIの二系統で INSERT 0 1 を証跡化する。SSL必須・最小SGを維持したまま運用可能状態に上げる。
+
+### 主要変更
+
+- `init.sql` を ECS Exec 経由で DRY-RUN → 本適用（BEGIN…ROLLBACK/COMMIT）
+- 2系統の挿入検証:
+  - CLI系: psycopg2 直で SKU-CLI を挿入
+  - アプリ経由: 暫定 /dbcheck で SKU-APP を挿入
+- RDS SG は 5432 inbound を ECSタスクSGのみ に統一（重複SG整理済）
+
+### 証跡
+
+- *_schema_dryrun_exec.log, *_schema_apply_exec.log
+- *_papyrus_psql_insert_cli.log, *_papyrus_psql_insert_app.log
+- *_rds_sg_inbound_after.json（最終形）
+
+### ロールアウト
+
+- us-west-2、サービス papyrus-task-service。外部公開無し、影響はタスク1本のみ。
+- 認証は OIDC。Secrets papyrus/prd/db は RDS 実体と整合済み（host/port/user/dbname/password）。
+
+### 残課題
+
+- [ ] /healthz を軽量実装して将来の ALB/TG ヘルスに流用
+- [ ] PGSSLMODE=require をタスク定義で恒久化、可能なら sslrootcert 検証まで
+- [ ] CI プリフライト: Secrets と RDS 実体の diff、RDS エンドポイント変更検知
+- [ ] CloudWatch Alarm（ECSメモリ/CPU、将来のALB 5xx/応答遅延）
+
 
 ## 2025-10-08 → 2025-10-17
 
@@ -41,13 +73,13 @@ Terraform記述のDB名、パスワードがSecretsと不整合を起こして�
 
 ### 残課題
 
-* **ヘルスエンドポイント実装**: `/healthz` をDB非依存で200返す軽量版で追加。将来ALB/TGのHCに流用。
-* **ALB/TG連結の最小化**: `containerName=app`/`containerPort=5000` でターゲット登録。ALBアクセスログ先S3だけ先に用意。
-* **DB経由の実証**: 一時エンドポイント `/dbcheck` 等で `INSERT 0 1` をアプリ経由で実演し証跡化。
-* **SSLの恒久化**: タスク定義に `PGSSLMODE=require` を常設。可能なら `sslrootcert=rds-combined-ca-bundle.pem` を同梱して検証強化。
-* **CIプリフライト**: デプロイ前に「SecretsとRDS実体のdiffチェック」をWorkflowに追加（`DBName/Endpoint/Port/Username`）。
-* **監視**: CloudWatch Alarm（ECSメモリ、ALB 5xx%、TargetResponseTime）をPapyrus側にも適用。
-* **ドキュメント**: `infra/10-rds/README.md` に「手作業との差分・再起動時刻・ParameterGroup差分」を追記。
+- [ ] **ヘルスエンドポイント実装**: `/healthz` をDB非依存で200返す軽量版で追加。将来ALB/TGのHCに流用。
+- [ ] **ALB/TG連結の最小化**: `containerName=app`/`containerPort=5000` でターゲット登録。ALBアクセスログ先S3だけ先に用意。
+- [ ] **DB経由の実証**: 一時エンドポイント `/dbcheck` 等で `INSERT 0 1` をアプリ経由で実演し証跡化。
+- [ ] **SSLの恒久化**: タスク定義に `PGSSLMODE=require` を常設。可能なら `sslrootcert=rds-combined-ca-bundle.pem` を同梱して検証強化。
+- [ ] **CIプリフライト**: デプロイ前に「SecretsとRDS実体のdiffチェック」をWorkflowに追加（`DBName/Endpoint/Port/Username`）。
+- [ ] **監視**: CloudWatch Alarm（ECSメモリ、ALB 5xx%、TargetResponseTime）をPapyrus側にも適用。
+- [ ] **ドキュメント**: `infra/10-rds/README.md` に「手作業との差分・再起動時刻・ParameterGroup差分」を追記。
 
 
 
