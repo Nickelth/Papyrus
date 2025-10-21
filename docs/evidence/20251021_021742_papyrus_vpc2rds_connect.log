@@ -1,0 +1,14 @@
+
+The Session Manager plugin was installed successfully. Use the AWS CLI to start a session.
+
+
+Starting session with SessionId: ecs-execute-command-79ra9x92e5b5vtppczalc54guq
+Python 3.11.14 (main, Oct  9 2025, 22:42:12) [GCC 14.2.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> [K>>> exit
+Use exit() or Ctrl-D (i.e. EOF) to exit
+>>> 
+
+
+Exiting session with sessionId: ecs-execute-command-79ra9x92e5b5vtppczalc54guq.
+
