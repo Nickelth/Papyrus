@@ -11,3 +11,10 @@ __pycache__/
 *.auto.tfvars
 *.auto.tfvars.json
 *tfvars*
+
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+.terraform/
+crash.log
+crash.*.log
