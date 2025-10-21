@@ -1,0 +1,1 @@
+438336773404.dkr.ecr.us-west-2.amazonaws.com/papyrus@sha256:e75f9cbe72cb3e7db72f548a4f81bc68528bf11615a6f6b759cbf9ac3a12b849
