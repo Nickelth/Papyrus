@@ -1,0 +1,46 @@
+
+The Session Manager plugin was installed successfully. Use the AWS CLI to start a session.
+
+
+Starting session with SessionId: ecs-execute-command-cngjodfiu7ona4dfg9x7ehcybi
+[cfg] fetching SSM param: /papyrus/prd/auth0/callback_url
+
+# 実リクエスト（prefix違いも一応探る）
+aws ecs execute-command --cluster papyrus-ecs-prd --task "$TASK_ARN" --container app \
+  --region "$REGION" --interactive \
+  --command "/bin/sh -lc 'python - <<\"PY\"
+import http.client
+for p in [\"/dbcheck\",\"/papyrus/dbcheck\",\"/api/dbcheck\",\"/app/dbcheck\"]:
+    try:
+        c=http.client.HTTPConnection(\"127.0.0.1\",5000,timeout=5)
+        c.request(\"GET\",p); r=c.getresponse()
+        print(p, \"->\", r.status, r.reason); print(\"body:\", r.read(160))
+    except Exception as e:
+        print(p, \"ERR\", e)
+PY'" | tee ~/papyrus-invoice/docs/evidence/$(date +%Y%m%d-%H%M%S)_papyrus_psql_insert_app.log
+Map([<Rule '/static/<filename>' (GET, HEAD, OPTIONS) -> static>,
+ <Rule '/' (GET, HEAD, OPTIONS) -> home>,
+ <Rule '/index' (GET, HEAD, OPTIONS) -> index>,
+ <Rule '/index' (POST, OPTIONS) -> handle_submit>,
+ <Rule '/generate_pdf' (POST, OPTIONS) -> generate_pdf>,
+ <Rule '/api/product_by_sku' (GET, HEAD, OPTIONS) -> product_by_sku>,
+ <Rule '/api/product_by_name' (GET, HEAD, OPTIONS) -> product_by_name>,
+ <Rule '/login' (GET, HEAD, OPTIONS) -> login>,
+ <Rule '/callback' (GET, HEAD, OPTIONS) -> callback>,
+ <Rule '/logout' (GET, HEAD, OPTIONS) -> logout>,
+ <Rule '/dbcheck' (GET, HEAD, OPTIONS) -> dbcheck.dbcheck>])
+/static/<path:filename> ['GET', 'HEAD', 'OPTIONS']
+/ ['GET', 'HEAD', 'OPTIONS']
+/index ['GET', 'HEAD', 'OPTIONS']
+/index ['OPTIONS', 'POST']
+/generate_pdf ['OPTIONS', 'POST']
+/api/product_by_sku ['GET', 'HEAD', 'OPTIONS']
+/api/product_by_name ['GET', 'HEAD', 'OPTIONS']
+/login ['GET', 'HEAD', 'OPTIONS']
+/callback ['GET', 'HEAD', 'OPTIONS']
+/logout ['GET', 'HEAD', 'OPTIONS']
+/dbcheck ['GET', 'HEAD', 'OPTIONS']
+
+
+Exiting session with sessionId: ecs-execute-command-cngjodfiu7ona4dfg9x7ehcybi.
+

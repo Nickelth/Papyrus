@@ -1,0 +1,10 @@
+
+The Session Manager plugin was installed successfully. Use the AWS CLI to start a session.
+
+
+Starting session with SessionId: ecs-execute-command-6h8zahkhfejff9xv39pnp7lt48
+/dbcheck: 404 NOT FOUND b'<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server.'
+
+
+Exiting session with sessionId: ecs-execute-command-6h8zahkhfejff9xv39pnp7lt48.
+
