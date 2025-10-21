@@ -1,0 +1,8 @@
+{
+    "ARN": "arn:aws:secretsmanager:us-west-2:<ACCOUNT_ID>:secret:papyrus/prd/db-NfQkJ1",
+    "Name": "papyrus/prd/db",
+    "VersionId": "025849b3-b4e4-44e5-a308-7a518b9f1756",
+    "VersionStages": [
+        "AWSCURRENT"
+    ]
+}

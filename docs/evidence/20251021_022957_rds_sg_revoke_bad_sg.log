@@ -1,0 +1,15 @@
+{
+    "Return": true,
+    "RevokedSecurityGroupRules": [
+        {
+            "SecurityGroupRuleId": "sgr-01f9fa2cbf6c31433",
+            "GroupId": "<sg-id>",
+            "IsEgress": false,
+            "IpProtocol": "tcp",
+            "FromPort": 5432,
+            "ToPort": 5432,
+            "ReferencedGroupId": "<sg-id>",
+            "Description": "ECS_tasks_to_RDS_5432"
+        }
+    ]
+}
