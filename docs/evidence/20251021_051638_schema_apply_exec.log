@@ -1,0 +1,13 @@
+
+The Session Manager plugin was installed successfully. Use the AWS CLI to start a session.
+
+
+Starting session with SessionId: ecs-execute-command-ahbn5nty9bvjhhcq83487zsp78
+  File "<stdin>", line 15
+    sql=.join(src)
+        ^
+SyntaxError: invalid syntax
+
+
+Exiting session with sessionId: ecs-execute-command-ahbn5nty9bvjhhcq83487zsp78.
+
