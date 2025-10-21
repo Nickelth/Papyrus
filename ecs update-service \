@@ -594,3 +594,599 @@
         "availabilityZoneRebalancing": "ENABLED"
     }
 }
+{
+    "service": {
+        "serviceArn": "arn:aws:ecs:us-west-2:438336773404:service/papyrus-ecs-prd/papyrus-task-service",
+        "serviceName": "papyrus-task-service",
+        "clusterArn": "arn:aws:ecs:us-west-2:438336773404:cluster/papyrus-ecs-prd",
+        "loadBalancers": [],
+        "serviceRegistries": [],
+        "status": "ACTIVE",
+        "desiredCount": 0,
+        "runningCount": 0,
+        "pendingCount": 0,
+        "capacityProviderStrategy": [
+            {
+                "capacityProvider": "FARGATE",
+                "weight": 1,
+                "base": 0
+            }
+        ],
+        "platformVersion": "1.4.0",
+        "platformFamily": "Linux",
+        "taskDefinition": "arn:aws:ecs:us-west-2:438336773404:task-definition/papyrus-task:30",
+        "deploymentConfiguration": {
+            "deploymentCircuitBreaker": {
+                "enable": true,
+                "rollback": true
+            },
+            "maximumPercent": 200,
+            "minimumHealthyPercent": 100,
+            "strategy": "ROLLING",
+            "bakeTimeInMinutes": 0
+        },
+        "deployments": [
+            {
+                "id": "ecs-svc/1042892394516706007",
+                "status": "PRIMARY",
+                "taskDefinition": "arn:aws:ecs:us-west-2:438336773404:task-definition/papyrus-task:30",
+                "desiredCount": 0,
+                "pendingCount": 0,
+                "runningCount": 0,
+                "failedTasks": 0,
+                "createdAt": "2025-10-12T01:14:25.140000+00:00",
+                "updatedAt": "2025-10-16T07:45:30.250000+00:00",
+                "capacityProviderStrategy": [
+                    {
+                        "capacityProvider": "FARGATE",
+                        "weight": 1,
+                        "base": 0
+                    }
+                ],
+                "platformVersion": "1.4.0",
+                "platformFamily": "Linux",
+                "networkConfiguration": {
+                    "awsvpcConfiguration": {
+                        "subnets": [
+                            "subnet-0384561db8c07163c",
+                            "subnet-08326af247b075d10",
+                            "subnet-0d521901e37cb965e",
+                            "subnet-09d851ed375890f2d"
+                        ],
+                        "securityGroups": [
+                            "sg-0afffcf8d04818381"
+                        ],
+                        "assignPublicIp": "ENABLED"
+                    }
+                },
+                "rolloutState": "COMPLETED",
+                "rolloutStateReason": "ECS deployment ecs-svc/1042892394516706007 completed."
+            }
+        ],
+        "roleArn": "arn:aws:iam::438336773404:role/aws-service-role/ecs.amazonaws.com/AWSServiceRoleForECS",
+        "events": [
+            {
+                "id": "9564428c-f644-47c8-b6ae-08721c9e9f27",
+                "createdAt": "2025-10-17T03:22:56.602000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "80bd540c-b147-487f-b1e5-552927f1c1ee",
+                "createdAt": "2025-10-16T21:22:32.438000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "dc94a876-f395-4fa6-8d90-91431995d82c",
+                "createdAt": "2025-10-16T19:45:58.433000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "1ae630d1-358a-4758-892c-7149233b2623",
+                "createdAt": "2025-10-16T13:45:43.301000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "8ab126b3-7ea1-4f01-a298-5341d3d66377",
+                "createdAt": "2025-10-16T07:45:30.257000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "2262ace6-f256-49c6-9c7f-1aed50f0d375",
+                "createdAt": "2025-10-16T07:45:30.256000+00:00",
+                "message": "(service papyrus-task-service) (deployment ecs-svc/1042892394516706007) deployment completed."
+            },
+            {
+                "id": "43d35892-0041-438f-b0c9-f7c3f06a5691",
+                "createdAt": "2025-10-16T07:44:27.288000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task edf8000e420a42c392ef982d0d8e938c)."
+            },
+            {
+                "id": "86bfdf0d-d0f2-4887-b115-735714d5e2fc",
+                "createdAt": "2025-10-16T07:43:27.277000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task 0ce7655d94bc48f2a80182e6cab71098)."
+            },
+            {
+                "id": "25720aca-7532-4c87-9488-2745534e60f6",
+                "createdAt": "2025-10-16T07:42:16.750000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task c07be3f9fc1d4ef8b3bbc1c767089ba1)."
+            },
+            {
+                "id": "c97ae9f2-0c50-472b-ba0b-746dfd8d7bed",
+                "createdAt": "2025-10-16T07:41:15.747000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task 01533901bd1f4b9c8ca1954e05e3f7ce)."
+            },
+            {
+                "id": "5a384867-6c4d-46c7-92ce-8221d89f8665",
+                "createdAt": "2025-10-16T07:41:13.330000+00:00",
+                "message": "(service papyrus-task-service) rolling back to deployment ecs-svc/1042892394516706007."
+            },
+            {
+                "id": "767a84a5-503a-4b1c-9c37-ad4ef8ae93de",
+                "createdAt": "2025-10-16T07:41:13.329000+00:00",
+                "message": "(service papyrus-task-service) (deployment ecs-svc/6960452539624547995) deployment failed: tasks failed to start."
+            },
+            {
+                "id": "2c578daa-7681-4ec2-b6b3-9744a1756243",
+                "createdAt": "2025-10-16T07:40:33.799000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task 8d6097502d6642f286ea8f1c44537139)."
+            },
+            {
+                "id": "4cd706be-f09e-4525-bf52-61b94583eee7",
+                "createdAt": "2025-10-16T07:39:33.107000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task b9d205e99307407e8bfd2b527916a828)."
+            },
+            {
+                "id": "5d308d55-48ab-4c28-8668-d5ec843f8e64",
+                "createdAt": "2025-10-16T07:38:32.965000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task 7d06322276dc470e943a8e385078a305)."
+            },
+            {
+                "id": "55c38a81-097e-45cd-afc2-98a421afa762",
+                "createdAt": "2025-10-16T07:37:31.944000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task 78ff8a247ad24ba69d5f0affbcf918c3)."
+            },
+            {
+                "id": "8e17f69f-03a5-44df-a7ac-04c274bb9dc1",
+                "createdAt": "2025-10-12T19:15:48.894000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "d6326bc7-e443-4acd-a190-4e5fbdad6073",
+                "createdAt": "2025-10-12T13:15:38.214000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "f57acc0a-81c7-4b66-ba5f-e1c2d31af7c0",
+                "createdAt": "2025-10-12T07:15:36.378000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "b35a7dd2-d0be-4fa3-9cf0-3599e2470f62",
+                "createdAt": "2025-10-12T01:15:12.861000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "317321ce-9856-40e7-83ab-3a0cee1ec0bf",
+                "createdAt": "2025-10-12T01:15:12.860000+00:00",
+                "message": "(service papyrus-task-service) (deployment ecs-svc/1042892394516706007) deployment completed."
+            },
+            {
+                "id": "50da72cf-8b9f-4d09-9af9-72cc08331e89",
+                "createdAt": "2025-10-12T01:12:50.348000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "215d4ddb-162b-4945-aad8-c765e8d63416",
+                "createdAt": "2025-10-12T01:12:50.347000+00:00",
+                "message": "(service papyrus-task-service) (deployment ecs-svc/4033506033100633788) deployment completed."
+            },
+            {
+                "id": "66ff15e5-6efc-4d27-8984-a0f5599a887a",
+                "createdAt": "2025-10-12T01:11:08.485000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "e84f8846-866c-4b79-a713-ad938a119096",
+                "createdAt": "2025-09-01T03:22:05.493000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "30aa0d43-4c2c-49ce-bbfc-d6f6be1d5764",
+                "createdAt": "2025-08-31T21:44:36.551000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "52cb2eeb-1e41-4cab-a278-309617b9fd90",
+                "createdAt": "2025-08-31T15:44:31.526000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "67eea646-c65a-418f-abc7-43dfbc8b550d",
+                "createdAt": "2025-08-31T09:44:11.649000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "f563cb2d-87ba-4cd4-bea1-750d71dda574",
+                "createdAt": "2025-08-31T03:44:06.199000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "012c1197-1735-4ca8-b932-b86b38c7854d",
+                "createdAt": "2025-08-31T03:43:56.536000+00:00",
+                "message": "(service papyrus-task-service) has stopped 1 running tasks: (task f939223ab4404a6192e49cfd181f7ac9)."
+            },
+            {
+                "id": "47811833-385b-46fa-8f07-b6e0eaad7dc0",
+                "createdAt": "2025-08-31T03:36:28.949000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "2958160d-0c60-483a-88fa-ad06df7bbc80",
+                "createdAt": "2025-08-31T03:36:28.948000+00:00",
+                "message": "(service papyrus-task-service) (deployment ecs-svc/8655239399540419694) deployment completed."
+            },
+            {
+                "id": "4a583e02-770f-4823-90ab-faaceac76f33",
+                "createdAt": "2025-08-31T03:33:16.526000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task f939223ab4404a6192e49cfd181f7ac9)."
+            },
+            {
+                "id": "08c10f8d-ebed-4db0-b0e9-7b0b61bbd470",
+                "createdAt": "2025-08-31T03:16:18.567000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "c0939285-cdd8-4ba6-b072-d48ba5203d15",
+                "createdAt": "2025-08-31T03:16:18.566000+00:00",
+                "message": "(service papyrus-task-service) (deployment ecs-svc/2659857689602547408) deployment completed."
+            },
+            {
+                "id": "6b4d556f-da7d-4cf4-9481-2c2e0b8f56ca",
+                "createdAt": "2025-08-31T03:15:25.687000+00:00",
+                "message": "(service papyrus-task-service) has stopped 1 running tasks: (task 8e0b179a75d44f6f8862ef8932a4ac39)."
+            },
+            {
+                "id": "58bb0be3-3ce5-4df2-b1a1-668bdc912800",
+                "createdAt": "2025-08-31T03:15:25.653000+00:00",
+                "message": "(service papyrus-task-service) has stopped 1 running tasks: (task aa67329e32584f73afcbc843f216242f)."
+            },
+            {
+                "id": "53144579-c893-4160-870c-03753a511548",
+                "createdAt": "2025-08-31T03:15:25.623000+00:00",
+                "message": "(service papyrus-task-service) was unable to stop or start tasks during a deployment because of the service deployment configuration. Update the minimumHealthyPercent or maximumPercent value and try again."
+            },
+            {
+                "id": "81ae28be-bf29-47bd-a4c8-a65f8b7c5389",
+                "createdAt": "2025-08-31T03:13:46.756000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task 8e0b179a75d44f6f8862ef8932a4ac39)."
+            },
+            {
+                "id": "50d6f50e-da25-44c0-9e9a-2ac021b52091",
+                "createdAt": "2025-08-31T03:09:21.442000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "daf24f29-d41e-4a37-8838-9de3a00c6426",
+                "createdAt": "2025-08-31T03:09:21.441000+00:00",
+                "message": "(service papyrus-task-service) (deployment ecs-svc/4834775500374898602) deployment completed."
+            },
+            {
+                "id": "99ac1e00-a096-469d-a709-b2548b082ac7",
+                "createdAt": "2025-08-31T03:06:08.909000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task aa67329e32584f73afcbc843f216242f)."
+            },
+            {
+                "id": "4d9021cd-2598-48aa-9e4c-53b9cf8916df",
+                "createdAt": "2025-08-31T03:03:25.474000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "ee872440-88a2-467d-bff8-7b63bb480c98",
+                "createdAt": "2025-08-31T03:03:25.473000+00:00",
+                "message": "(service papyrus-task-service) (deployment ecs-svc/4465665549411757612) deployment completed."
+            },
+            {
+                "id": "5c42e9f9-cc2b-47fb-972e-85c3c6958043",
+                "createdAt": "2025-08-31T03:02:24.158000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "29ad2f83-4b26-4d03-bab1-56f7e4b1397b",
+                "createdAt": "2025-08-31T03:02:14.256000+00:00",
+                "message": "(service papyrus-task-service) has stopped 1 running tasks: (task be669a966e5c4594a2399a0942bf7744)."
+            },
+            {
+                "id": "09eead75-8872-4df6-8bde-9a6975ca2039",
+                "createdAt": "2025-08-31T02:57:49.675000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "a36d1071-fd34-4e70-a1f4-18eb93b3f661",
+                "createdAt": "2025-08-31T02:57:49.674000+00:00",
+                "message": "(service papyrus-task-service) (deployment ecs-svc/9745561747855661655) deployment completed."
+            },
+            {
+                "id": "00146730-8cca-42f9-bd48-aa6ee23a2f2b",
+                "createdAt": "2025-08-31T02:54:37.116000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task be669a966e5c4594a2399a0942bf7744)."
+            },
+            {
+                "id": "3d3555cc-6579-4688-b449-da8906282a92",
+                "createdAt": "2025-08-31T02:54:15.965000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "3e9d4cfe-64f1-4795-a890-c813420f6f18",
+                "createdAt": "2025-08-31T02:54:15.964000+00:00",
+                "message": "(service papyrus-task-service) (deployment ecs-svc/0276834124831630641) deployment completed."
+            },
+            {
+                "id": "750cc7df-d284-4211-88ac-0a2d7c196eae",
+                "createdAt": "2025-08-31T02:53:35.263000+00:00",
+                "message": "(service papyrus-task-service) has stopped 1 running tasks: (task c0dea7c4aa1247d08488d3764f3c983d)."
+            },
+            {
+                "id": "dfffae88-26c0-47b8-b5c1-534b9c581750",
+                "createdAt": "2025-08-31T02:53:35.222000+00:00",
+                "message": "(service papyrus-task-service) was unable to stop or start tasks during a deployment because of the service deployment configuration. Update the minimumHealthyPercent or maximumPercent value and try again."
+            },
+            {
+                "id": "542bc5ba-6a19-4bc9-a709-74980d9f27c2",
+                "createdAt": "2025-08-31T02:53:25.119000+00:00",
+                "message": "(service papyrus-task-service) has stopped 1 running tasks: (task d71794eeb39b4d69bcd944b06986f2e8)."
+            },
+            {
+                "id": "df6a6ba0-11d6-4528-b462-ee48fca5b587",
+                "createdAt": "2025-08-31T02:53:25.071000+00:00",
+                "message": "(service papyrus-task-service) was unable to stop or start tasks during a deployment because of the service deployment configuration. Update the minimumHealthyPercent or maximumPercent value and try again."
+            },
+            {
+                "id": "0509c489-5fe1-4dc3-a93a-0e86c90c07db",
+                "createdAt": "2025-08-31T02:52:24.830000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task c0dea7c4aa1247d08488d3764f3c983d)."
+            },
+            {
+                "id": "07c06ba8-0a7a-41c7-9ab3-92ca1484abfd",
+                "createdAt": "2025-08-31T02:46:48.454000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "901a1cb9-d007-49d0-bb96-232c4e4b7b5d",
+                "createdAt": "2025-08-31T02:46:48.453000+00:00",
+                "message": "(service papyrus-task-service) (deployment ecs-svc/6678860257610992672) deployment completed."
+            },
+            {
+                "id": "46cbf1d1-93b1-4f35-aca2-d15cc5d5da85",
+                "createdAt": "2025-08-31T02:43:35.789000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task d71794eeb39b4d69bcd944b06986f2e8)."
+            },
+            {
+                "id": "fdaf8694-9a38-4686-81a8-d02fd9b11320",
+                "createdAt": "2025-08-31T02:43:04.774000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "7f1265ab-90a6-4f33-89ca-84687380189b",
+                "createdAt": "2025-08-31T02:43:04.773000+00:00",
+                "message": "(service papyrus-task-service) (deployment ecs-svc/5484432277744123925) deployment completed."
+            },
+            {
+                "id": "504315d1-5fd5-4965-82af-1625d0a55a16",
+                "createdAt": "2025-08-31T02:42:54.623000+00:00",
+                "message": "(service papyrus-task-service) has stopped 1 running tasks: (task 726eb0dc849e4e7eb3f26f605e2b2937)."
+            },
+            {
+                "id": "c7c6594c-9c28-45bd-b950-1d999f93fef7",
+                "createdAt": "2025-08-31T02:41:37.037000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task 726eb0dc849e4e7eb3f26f605e2b2937)."
+            },
+            {
+                "id": "d2fad3df-55c1-4ed0-ae22-7d3d4b6a96a4",
+                "createdAt": "2025-08-31T02:40:36.007000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task c8532cb24b0b4540b95aa5bf702a9e3e)."
+            },
+            {
+                "id": "c58e85d0-883a-4821-9bc3-43e4fb5bc941",
+                "createdAt": "2025-08-31T02:39:35.673000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task 9dd97163d0fc4d63b5eeaa9cf7237e2d)."
+            },
+            {
+                "id": "12bfd93c-b79e-47a5-a2d8-f76c02d464f2",
+                "createdAt": "2025-08-31T02:38:35.280000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task 29128e1ae1f943f7bd9b297b828e084d)."
+            },
+            {
+                "id": "8ed1d133-25c8-415e-8e78-3b408e7eb363",
+                "createdAt": "2025-08-31T02:37:37.167000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task 55d1a1f5f54a46c78cff94c46e341158)."
+            },
+            {
+                "id": "fb429aab-48a1-4297-9835-e206975e2555",
+                "createdAt": "2025-08-31T02:36:38.856000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task f1ef338719c442ccbd94f88bdc33d67b)."
+            },
+            {
+                "id": "8d71c581-48fe-4724-b910-fb718086fd5f",
+                "createdAt": "2025-08-31T02:35:44.720000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task 6a4703a011d64d2d8ba89dca22374582)."
+            },
+            {
+                "id": "12ff8679-018a-407e-bb2c-45faba000ae1",
+                "createdAt": "2025-08-31T02:35:42.711000+00:00",
+                "message": "(service papyrus-task-service) rolling back to deployment ecs-svc/5484432277744123925."
+            },
+            {
+                "id": "c06ed82b-9f7f-482c-8e9c-3112b1951213",
+                "createdAt": "2025-08-31T02:35:42.710000+00:00",
+                "message": "(service papyrus-task-service) (deployment ecs-svc/7152404877341828546) deployment failed: tasks failed to start."
+            },
+            {
+                "id": "758d9aaf-539e-4aed-bb09-0b0854cf2525",
+                "createdAt": "2025-08-31T02:35:34.564000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task bf3e188a71c045149ad00fc2c86bf20c)."
+            },
+            {
+                "id": "6d55bd37-cd20-472e-b5e4-640b6786d0e5",
+                "createdAt": "2025-08-31T02:34:34.814000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task ed44cfd708ee4f9da7fb13b1ded8f7fb)."
+            },
+            {
+                "id": "fbb4f575-1841-41c9-86f4-c4ce8745004b",
+                "createdAt": "2025-08-31T02:33:36.053000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task 39e7a83ed7d34832b64d779d1b2a7bb5)."
+            },
+            {
+                "id": "c10b8927-2c50-470d-b81c-81f0cea8481d",
+                "createdAt": "2025-08-31T02:32:34.801000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task 53adb6f2ea244c31b993f08a9cb4ec93)."
+            },
+            {
+                "id": "75f6ba56-bdab-4aa7-890f-f10e3fac04ad",
+                "createdAt": "2025-08-31T02:24:15.507000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "87855dac-31b9-4f83-975f-ba294a0edec8",
+                "createdAt": "2025-08-31T02:24:15.506000+00:00",
+                "message": "(service papyrus-task-service) (deployment ecs-svc/5484432277744123925) deployment completed."
+            },
+            {
+                "id": "5d0efa25-75d3-4d0f-a3d6-07a571dda110",
+                "createdAt": "2025-08-31T02:07:05.136000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "5791f687-85ba-466b-81c4-b1af644d6ee2",
+                "createdAt": "2025-08-30T23:48:50.434000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "5cf43695-e92e-45c2-83d4-96dd8fc8a8d9",
+                "createdAt": "2025-08-30T23:32:02.720000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "633ff651-a39f-4c67-8c36-cb449a283f63",
+                "createdAt": "2025-08-30T23:02:50.928000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "225954ef-b5ba-48a0-95e8-f54ac2fb9085",
+                "createdAt": "2025-08-30T21:25:01.970000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "9d2fa6c9-1d89-40c6-929f-e59950db3536",
+                "createdAt": "2025-08-30T15:24:57.478000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "90579977-c282-43af-a80a-369109206cf6",
+                "createdAt": "2025-08-30T09:24:29.514000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "2629e99d-682c-45ea-a54b-82d9ba6cebf4",
+                "createdAt": "2025-08-30T09:24:29.513000+00:00",
+                "message": "(service papyrus-task-service) (deployment ecs-svc/2294690181901044753) deployment completed."
+            },
+            {
+                "id": "47c02eda-1e31-431e-8df8-cf4bcde2cb88",
+                "createdAt": "2025-08-30T09:23:39.005000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task 4ee785747c2e4779b0966d73f1ae7fb9)."
+            },
+            {
+                "id": "bc649964-cfc0-43fb-8fbc-0a8b4399b794",
+                "createdAt": "2025-08-30T09:22:38.210000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task c17f0749731d40e8921aa1561bfb1a85)."
+            },
+            {
+                "id": "73d19872-8c85-4a85-a487-77dc7f653334",
+                "createdAt": "2025-08-30T09:21:43.190000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task 6cbdcd5d0feb4e72bc6d112b323b31d5)."
+            },
+            {
+                "id": "ca00ef29-8de4-4867-8701-2da2eedfeb5d",
+                "createdAt": "2025-08-30T09:21:36.068000+00:00",
+                "message": "(service papyrus-task-service) rolling back to deployment ecs-svc/2294690181901044753."
+            },
+            {
+                "id": "3eea1e83-4755-4f2a-82bc-15b49bdbaa81",
+                "createdAt": "2025-08-30T09:21:36.067000+00:00",
+                "message": "(service papyrus-task-service) (deployment ecs-svc/0800629155691120647) deployment failed: tasks failed to start."
+            },
+            {
+                "id": "998c86fc-4ab7-4284-973b-cc0a2a821447",
+                "createdAt": "2025-08-30T09:21:24.444000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task c8bbff9c074240069d1746ea9beddacb)."
+            },
+            {
+                "id": "89fe2c8c-d92e-4d39-93cb-6b84dee2aed1",
+                "createdAt": "2025-08-30T09:20:26.226000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task 5d97e80d27824ffdac2c1bd8571bb79d)."
+            },
+            {
+                "id": "ed858480-fa48-4308-b209-30f733538a3d",
+                "createdAt": "2025-08-30T09:19:25.568000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task 7602badee82742c4b0071ac4e12f352e)."
+            },
+            {
+                "id": "6c54fc3f-db39-4d21-92d2-69a686899e47",
+                "createdAt": "2025-08-30T09:18:23.734000+00:00",
+                "message": "(service papyrus-task-service) has started 1 tasks: (task c62ef7acfdf74757ada333fb1cfc37e4)."
+            },
+            {
+                "id": "7bf84d87-9a25-4535-8427-92e4caabb1fd",
+                "createdAt": "2025-08-25T04:59:13.766000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "a6aae7d4-1d3c-4a57-90bf-c0507518d5f5",
+                "createdAt": "2025-08-24T22:59:08.408000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "f1b5b9cf-82a5-451a-8646-57066fa39e86",
+                "createdAt": "2025-08-24T16:58:59.850000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "c6497f8d-d12c-46c9-aa2f-3ac52cf71cfc",
+                "createdAt": "2025-08-24T10:58:30.111000+00:00",
+                "message": "(service papyrus-task-service) has reached a steady state."
+            },
+            {
+                "id": "ae5f1a1a-805c-4224-99e6-b2a1c256844b",
+                "createdAt": "2025-08-24T10:58:30.110000+00:00",
+                "message": "(service papyrus-task-service) (deployment ecs-svc/2294690181901044753) deployment completed."
+            }
+        ],
+        "createdAt": "2025-08-24T02:59:34.805000+00:00",
+        "placementConstraints": [],
+        "placementStrategy": [],
+        "networkConfiguration": {
+            "awsvpcConfiguration": {
+                "subnets": [
+                    "subnet-0384561db8c07163c",
+                    "subnet-08326af247b075d10",
+                    "subnet-0d521901e37cb965e",
+                    "subnet-09d851ed375890f2d"
+                ],
+                "securityGroups": [
+                    "sg-0afffcf8d04818381"
+                ],
+                "assignPublicIp": "ENABLED"
+            }
+        },
+        "healthCheckGracePeriodSeconds": 0,
+        "schedulingStrategy": "REPLICA",
+        "deploymentController": {
+            "type": "ECS"
+        },
+        "createdBy": "arn:aws:iam::438336773404:root",
+        "enableECSManagedTags": true,
+        "propagateTags": "NONE",
+        "enableExecuteCommand": true,
+        "availabilityZoneRebalancing": "ENABLED"
+    }
+}
