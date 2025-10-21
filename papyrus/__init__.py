@@ -6,6 +6,7 @@ from papyrus.auth_routes import register_auth_routes
 from .db import init_db
 from papyrus.config_runtime import load_config, init_db_pool  # ★ 追加
 import os
+from papyrus.routes.dbcheck import bp as dbcheck_bp
 
 def create_app():
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -25,4 +26,5 @@ def create_app():
     register_routes(app)
     register_api_routes(app)
     register_auth_routes(app)
+    app.register_blueprint(dbcheck_bp)
     return app
