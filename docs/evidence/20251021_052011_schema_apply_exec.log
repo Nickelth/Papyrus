@@ -1,0 +1,10 @@
+
+The Session Manager plugin was installed successfully. Use the AWS CLI to start a session.
+
+
+Starting session with SessionId: ecs-execute-command-7yzfy268gtihhod34po9azn2zq
+SCHEMA APPLY OK (statements= 3 )
+
+
+Exiting session with sessionId: ecs-execute-command-7yzfy268gtihhod34po9azn2zq.
+
