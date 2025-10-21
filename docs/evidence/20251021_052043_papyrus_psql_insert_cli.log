@@ -1,0 +1,16 @@
+
+The Session Manager plugin was installed successfully. Use the AWS CLI to start a session.
+
+
+Starting session with SessionId: ecs-execute-command-68kh9qzuhijbvgejljgjfzidta
+Traceback (most recent call last):
+  File "<stdin>", line 8, in <module>
+psycopg2.errors.UndefinedColumn: column "sku" does not exist
+LINE 1: ...chema.products (sku,name,unit_price,note) VALUES (SKU-CLI,he...
+                                                             ^
+DETAIL:  There is a column named "sku" in table "products", but it cannot be referenced from this part of the query.
+
+
+
+Exiting session with sessionId: ecs-execute-command-68kh9qzuhijbvgejljgjfzidta.
+

@@ -1,0 +1,39 @@
+--------------------------------------------------------------------------------
+|                             DescribeDBParameters                             |
++------------------------------------+------------------------------+----------+
+|  log_autovacuum_min_duration       |  10000                       |  dynamic |
+|  log_checkpoints                   |  1                           |  dynamic |
+|  log_connections                   |  1                           |  dynamic |
+|  log_destination                   |  stderr                      |  dynamic |
+|  log_directory                     |  /rdsdbdata/log/error        |  dynamic |
+|  log_disconnections                |  None                        |  dynamic |
+|  log_duration                      |  None                        |  dynamic |
+|  log_error_verbosity               |  None                        |  dynamic |
+|  log_executor_stats                |  None                        |  dynamic |
+|  log_file_mode                     |  0644                        |  dynamic |
+|  log_filename                      |  postgresql.log.%Y-%m-%d-%H  |  dynamic |
+|  log_hostname                      |  None                        |  dynamic |
+|  log_line_prefix                   |  %t:%r:%u@%d:[%p]:           |  dynamic |
+|  log_lock_waits                    |  None                        |  dynamic |
+|  log_min_duration_sample           |  None                        |  dynamic |
+|  log_min_duration_statement        |  500                         |  dynamic |
+|  log_min_error_statement           |  None                        |  dynamic |
+|  log_min_messages                  |  None                        |  dynamic |
+|  log_parameter_max_length          |  None                        |  dynamic |
+|  log_parameter_max_length_on_error |  None                        |  dynamic |
+|  log_parser_stats                  |  None                        |  dynamic |
+|  log_planner_stats                 |  None                        |  dynamic |
+|  log_recovery_conflict_waits       |  None                        |  dynamic |
+|  log_replication_commands          |  None                        |  dynamic |
+|  log_rotation_age                  |  60                          |  dynamic |
+|  log_rotation_size                 |  None                        |  dynamic |
+|  log_startup_progress_interval     |  None                        |  dynamic |
+|  log_statement                     |  None                        |  dynamic |
+|  log_statement_sample_rate         |  None                        |  dynamic |
+|  log_statement_stats               |  None                        |  dynamic |
+|  log_temp_files                    |  None                        |  dynamic |
+|  log_timezone                      |  UTC                         |  dynamic |
+|  log_transaction_sample_rate       |  None                        |  dynamic |
+|  log_truncate_on_rotation          |  0                           |  dynamic |
+|  rds.force_ssl                     |  1                           |  dynamic |
++------------------------------------+------------------------------+----------+
