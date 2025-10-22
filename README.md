@@ -9,17 +9,19 @@ RDSから商品情報を取得し、GUI上の納品リストから納品書をPD
 ### ルール
 
 - README は**300行未満**、図鑑は docs。
-- 詳細なコマンド羅列は `docs/training.md` と `docs/ops.md` に置く。
+- 詳細なコマンド羅列は`docs/(date %Y%m%d).md`に置く。
 - 実行結果スクショや長表は S3 の成果物か `docs/` にリンクだけ。
 - 変更履歴は **CHANGELOG** 系統に一元化。README の「変更履歴」セクションは禁止。
 
 ### ディレクトリ構成
 
 ```plaintext
-your_project/
+papyrus-invoice/
 ├── Dockerfile
 ├── docker-compose.yml
 ├── run.py
+├── init.sql
+├── requirements.txt
 ├── .env.dev
 ├── .env.prd
 ├── infra/
@@ -32,21 +34,21 @@ your_project/
 │   │   └── versions.tf
 │   └── 20-alb/
 │       └── main.tf
-└── papyrus/
-    ├── blueprints/
-    │   ├── dbcheck.py
-    │   └── healthz.py
-    ├── __init__.py
-    ├── api_routes.py
-    ├── auth_routes.py
-    ├── auth.py
-    ├── db.py
-    ├── routes.py
-    ├── config_runtime.py
-    ├── templates/
-    ├── static/
-    └── docs/
-        └── evidence/
+├── papyrus/
+│   ├── blueprints/
+│   │   ├── dbcheck.py
+│   │   └── healthz.py
+│   ├── __init__.py
+│   ├── api_routes.py
+│   ├── auth_routes.py
+│   ├── auth.py
+│   ├── db.py
+│   ├── routes.py
+│   └── config_runtime.py
+├── templates/
+├── static/
+└── docs/
+    └── evidence/
 ```
 
 ### 開発環境起動時
