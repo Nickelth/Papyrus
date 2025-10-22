@@ -1,0 +1,10 @@
+{
+    "repository": {
+        "repositoryArn": "arn:aws:ecr:us-west-2:<ACCOUNT_ID>:repository/papyrus/app",
+        "registryId": "<ACCOUNT_ID>",
+        "repositoryName": "papyrus/app",
+        "repositoryUri": "<ECR_REGISTRY>/papyrus/app",
+        "createdAt": "2025-10-21T07:09:19.852000+00:00",
+        "imageTagMutability": "MUTABLE"
+    }
+}
