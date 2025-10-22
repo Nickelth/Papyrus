@@ -18,3 +18,4 @@ __pycache__/
 .terraform/
 crash.log
 crash.*.log
+ecs*

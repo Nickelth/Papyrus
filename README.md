@@ -2,9 +2,9 @@
 
 RDSから商品情報を取得し、GUI上の納品リストから納品書をPDF出力するポートフォリオ。
 
-[![ECR Push](https://github.com/Nickelth/Papyrus/actions/workflows/ecr-push.yml/badge.svg)](../../actions)
-[![ECS Deploy](https://github.com/Nickelth/Papyrus/actions/workflows/ecs-deploy.yml/badge.svg)](../../actions)
-[![ECS Scaling](https://github.com/Nickelth/Papyrus/actions/workflows/ecs-scale.yml/badge.svg)](../../actions)
+[![ECR Push](https://github.com/Nickelth/papyrus-invoice/actions/workflows/ecr-push.yml/badge.svg)](../../actions)
+[![ECS Deploy](https://github.com/Nickelth/papyrus-invoice/actions/workflows/ecs-deploy.yml/badge.svg)](../../actions)
+[![ECS Scaling](https://github.com/Nickelth/papyrus-invoice/actions/workflows/ecs-scale.yml/badge.svg)](../../actions)
 
 ### ルール
 
@@ -22,7 +22,20 @@ your_project/
 ├── run.py
 ├── .env.dev
 ├── .env.prd
+├── infra/
+│   ├── 10-rds/
+│   │   ├── .terraform.lock.hcl
+│   │   ├── main.tf
+│   │   ├── outputs.tf
+│   │   ├── providers.tf
+│   │   ├── variables.tf
+│   │   └── versions.tf
+│   └── 20-alb/
+│       └── main.tf
 └── papyrus/
+    ├── blueprints/
+    │   ├── dbcheck.py
+    │   └── healthz.py
     ├── __init__.py
     ├── api_routes.py
     ├── auth_routes.py
@@ -31,7 +44,9 @@ your_project/
     ├── routes.py
     ├── config_runtime.py
     ├── templates/
-    └── static/
+    ├── static/
+    └── docs/
+        └── evidence/
 ```
 
 ### 開発環境起動時
