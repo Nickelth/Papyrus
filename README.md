@@ -5,6 +5,7 @@ RDSから商品情報を取得し、GUI上の納品リストから納品書をPD
 [![ECR Push](https://github.com/Nickelth/papyrus-invoice/actions/workflows/ecr-push.yml/badge.svg)](../../actions)
 [![ECS Deploy](https://github.com/Nickelth/papyrus-invoice/actions/workflows/ecs-deploy.yml/badge.svg)](../../actions)
 [![ECS Scaling](https://github.com/Nickelth/papyrus-invoice/actions/workflows/ecs-scale.yml/badge.svg)](../../actions)
+[![ALB Smoke](https://github.com/Nickelth/papyrus-invoice/actions/workflows/alb-smoke.yml/badge.svg)](../../actions)
 
 ### ルール
 
@@ -33,7 +34,9 @@ papyrus-invoice/
 │   │   ├── variables.tf
 │   │   └── versions.tf
 │   └── 20-alb/
-│       └── main.tf
+│       ├── .terraform.lock.hcl
+│       ├── main.tf
+│       └── outputs.tf
 ├── papyrus/
 │   ├── blueprints/
 │   │   ├── dbcheck.py
