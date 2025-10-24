@@ -1,6 +1,11 @@
 name: alb-smoke
 on: workflow_dispatch
-permissions: { id-token: write, contents: read }
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}  
 
 jobs:
   smoke:
