@@ -1,0 +1,38 @@
+name: alb-smoke
+on: workflow_dispatch
+permissions: { id-token: write, contents: read }
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: AWS creds
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::<ACCOUNT_ID>:role/gh-actions-oidc
+          aws-region: us-west-2
+      - name: Terraform apply (ALB/TG only)
+        working-directory: infra/20-alb
+        env:
+          TF_IN_AUTOMATION: "1"
+        run: |
+          terraform init -input=false -upgrade=false
+          terraform validate
+          terraform apply -auto-approve -var-file=dev.tfvars
+      - name: Export outputs
+        id: outs
+        working-directory: infra/20-alb
+        run: |
+          echo "alb_dns=$(terraform output -raw alb_dns_name)" >> $GITHUB_OUTPUT
+          echo "tg_arn=$(terraform output -raw tg_arn)" >> $GITHUB_OUTPUT
+      - name: Save outputs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: alb-outputs
+          path: |
+            infra/20-alb/terraform.tfstate
+      - name: Terraform destroy (always)
+        if: always()
+        working-directory: infra/20-alb
+        run: terraform destroy -auto-approve -var-file=dev.tfvars
