@@ -10,8 +10,8 @@ jobs:
       - name: AWS creds
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::<ACCOUNT_ID>:role/gh-actions-oidc
-          aws-region: us-west-2
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
       - name: Terraform apply (ALB/TG only)
         working-directory: infra/20-alb
         env:
