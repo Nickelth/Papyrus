@@ -5,7 +5,9 @@ permissions:
   contents: read
 
 env:
-  AWS_REGION: ${{ vars.AWS_REGION }}  
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  VPC_ID: ${{ secrets.VPC_ID }}
+  PUBLIC_SUBNET_IDS_JSON: ${{ secrets.PUBLIC_SUBNET_IDS }}
 
 jobs:
   smoke:
@@ -22,6 +24,15 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+      - name: Write tfvars (runtime only)
+        working-directory: infra/20-alb
+        run: |
+          cat > dev.auto.tfvars <<'TFV'
+          vpc_id            = "${VPC_ID}"
+          public_subnet_ids = ${PUBLIC_SUBNET_IDS_JSON}
+          container_port    = 5000
+          allow_cidrs       = ["0.0.0.x/0"]
+          TFV
       - name: Terraform apply (ALB/TG only)
         working-directory: infra/20-alb
         env:
