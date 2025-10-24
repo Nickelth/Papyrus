@@ -10,8 +10,14 @@ terraform {
 
 variable "vpc_id" { type = string }
 variable "public_subnet_ids" { type = list(string) }
-variable "container_port" { type = number, default = 5000 }
-variable "allow_cidrs" { type = list(string), default = ["0.0.0.x/0"] }
+variable "container_port" { 
+  type = number
+  default = 5000 
+}
+variable "allow_cidrs" { 
+  type = list(string)
+  default = ["0.0.0.x/0"] 
+}
 
 resource "aws_security_group" "alb" {
   name        = "papyrus-alb-sg"
