@@ -38,6 +38,7 @@ jobs:
           public_subnet_ids = ${{ env.PUBLIC_SUBNET_IDS_JSON }}
           container_port    = 5000
           allow_cidrs       = ["0.0.0.0/0"]
+          ecs_tasks_sg_id   = "${{ secrets.ECS_TASK_SG_ID }}"
           TFV
 
       - name: Terraform apply (ALB/TG only)
