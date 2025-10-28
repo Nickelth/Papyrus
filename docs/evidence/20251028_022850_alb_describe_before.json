@@ -1,0 +1,7 @@
+{
+    "Arn": "arn:aws:elasticloadbalancing:us-west-2:438336773404:loadbalancer/app/papyrus-alb/8b686be9c2d209bb",
+    "DNS": "papyrus-alb-886854883.us-west-2.elb.amazonaws.com",
+    "SGs": [
+        "sg-06c4226fecb543f84"
+    ]
+}
