@@ -22,8 +22,8 @@ def create_app():
     # ★ DBプールを初期化して app に保持
     app.config["DB_POOL"] = init_db_pool(cfg)
 
-    init_auth(app)     # ← cfg から読むよう後述の修正で対応
-    init_db(app)       # ← プールを使うよう後述で修正
+    init_auth(app)
+    init_db(app)
     register_routes(app)
     register_api_routes(app)
     register_auth_routes(app)

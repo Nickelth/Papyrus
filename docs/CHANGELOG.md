@@ -1,4 +1,92 @@
-## 2025-10-22 → 2025-10-28
+## 2025-10-28
+
+### 目的
+
+Papyrus の「本番相当の最小構成」をCI上で一時的に起動し、ALB経由でFargateタスクへ到達できること、アプリの `/healthz` と `/dbcheck` が正常応答することを証跡付きで確認し、最後にすべて削除することを自動化した。
+
+ALB / Target Group / SG / Fargateタスク / RDS を一時的に立てて HTTP 200 と DB書き込みを確認し、証跡を残してから `terraform destroy` まで行うCIを完成させた。
+
+### 主要変更
+
+1. **`alb-smoke` ワークフロー拡張**
+
+   - `workflow_dispatch` で手動起動可能な `alb-smoke` を強化。
+   - Terraformで ALB / Target Group / ALB用SG / タスクSGへの一時Ingress を `apply`。
+   - `apply` 後の output を後続ステップで使えるようにエクスポート。
+
+2. **Fargateタスクの動的検出とターゲット登録**
+
+   - CIロールに `ecs:ListTasks` などを追加し、`papyrus-task-service` の RUNNING タスクを特定。
+   - ENI からタスクのプライベートIPを取得し、`aws elbv2 register-targets` で Target Group に登録。
+   - `aws elbv2 wait target-in-service` で ALB 側のヘルスチェック(InService)まで自動待機。
+   - SGは `ecs_tasks_sg_id` を tfvars から渡し、Terraformが「ALB SG -> タスク SG:5000/tcp」の一時Ingressを自動で開閉するよう統一。
+
+3. **疎通テストと証跡取得の自動化**
+
+   - ALB の DNS 名に対して `curl -si http://ALB_DNS/healthz` と `/dbcheck` を実行。
+   - ステータスライン / レスポンスヘッダ / ボディを `evidence/` 以下に時刻付きログとして保存。
+   - `/dbcheck` で `SKU-APP` のINSERT経路が `200` / JSON で返ることも記録可能。
+   - 失敗時でもCI自体は即死しないようにし、ログは必ず残す。
+
+4. **証跡のアーティファクト化**
+
+   - `actions/upload-artifact@v4` で `evidence/-.log` と `infra/20-alb/terraform.tfstate` を保存。
+   - Smoke結果を「実際に到達・200応答・DB INSERTできた」物理ログとして持ち帰れるようにした。
+
+5. **自動クリーンアップ**
+
+   - ジョブ末尾で必ず `terraform destroy -auto-approve` を実行。
+   - ALB / Target Group / SG / 一時Ingress をすべて破棄し、リーク・コスト残を防止。
+   - destroy まで含めてワークフロー全体が成功状態で完走することを確認済み。
+
+6. **変数とIAM権限の整備**
+
+   - Terraform側に `ecs_tasks_sg_id` を追加し、`default = null` と `count = var.ecs_tasks_sg_id == null ? 0 : 1` で任意化。ローカル検証では未設定でも plan/apply が通る。CIでは Secrets から渡して有効化。
+   - GitHub Actions で `PUBLIC_SUBNET_IDS`, `VPC_ID`, `ECS_TASK_SG_ID` などを runtime tfvars (`dev.auto.tfvars`) として書き出すフローを確立。
+   - IAMロールには ALB/TG 周り (elasticloadbalancing系のDescribe/Modify/RegisterTargets 等)、ECS (ListTasks/DescribeTasks)、EC2 SG編集など最小限の権限を付与済み。
+
+7. **CIジョブの成功確認**
+
+   - 最新実行は `succeeded`。
+   - 「作る → 疎通確認 → 証跡取得 → 破壊」が1本の workflow 内で成立した。
+
+### 証跡
+
+- GitHub Actions 実行結果のスクリーンショット
+  (ジョブ `smoke` が `destroy` まで緑で完走している状態)
+
+- `evidence/*_healthz.log`, `evidence/*_dbcheck.log`
+  - ALB DNS に対して `curl -si /healthz` と `/dbcheck` を実行した生ログ
+  - `/dbcheck` は RDS(PostgreSQL) に対する INSERT/UPSERT 経路 (`papyrus_schema.products` への SKU-APP) を通し、JSONを返すことを確認。
+
+- `infra/20-alb/terraform.tfstate` のアーティファクト
+  - CIがそのrunで実際に立てた ALB / Target Group / SG / 一時Ingress のリソースIDが入っている。監査証跡として利用可能。
+
+- ECSタスク検出と `register-targets` のログ
+  - RUNNINGタスクのプライベートIPを特定。
+  - `private_ip:5000` を Target Group に一時登録。
+  - `aws elbv2 wait target-in-service` が成功していることを記録。
+
+これにより「Papyrus は RDS 付きの実稼働中 ECS タスクを CI が動的に拾い、ALB 経由で HTTP 200 を返す」ことを客観的に証明できる。
+
+### ロールアウト
+
+- `alb-smoke` ワークフローを1回走らせるだけで、ALB / SG / TG / ECS / RDS / Flask / Gunicorn / Secrets Manager / SSM / psycopg2 / INSERT 経路まで含めた実インフラのスモークテスト (ほぼE2E) が自動実行される。
+- destroy が必須ステップなので、検証後にリソースも課金も残らない。
+- `evidence/*.log` と `terraform.tfstate` がartifact化されるため、監査・技術ブログの裏付け資料にそのまま使える。
+
+### 残課題
+
+- [ ] `/healthz` をDB非依存の軽量エンドポイントとして固定し、TargetGroupの `health_check.path` を `/healthz` に統一する (現状は `/` を流用しているケースがある)。
+- [ ] `/dbcheck` のJSONレスポンス (SKU-APPや inserted=true 等) をartifactとして恒常的に保存し、RDSへのINSERT証跡を明文化する。
+- [ ] PG接続のSSL (`PGSSLMODE=require`) をタスク定義に組み込み、平常運用とCIの接続ポリシーを統一する。
+- [ ] Secrets / RDS ドリフト検知、FlaskのBlueprint未登録でタスクがExit 3する問題の再発防止など、起動前プリフライトの自動化は未統合。
+- [ ] CloudWatchアラーム (タスクExit Code, メモリ圧迫, 将来のALB 5xxなど) はまだTerraform化していない。
+- [ ] README整備(2025-10-21以降分、`ECS_TASK_SG_ID` の注入方法など) が未反映。今後 `infra/20-alb/README.md` に反映する。
+
+---
+
+## 2025-10-24 → 2025-10-28
 
 ### 目的
 
@@ -95,6 +183,8 @@ Papyrus 環境において、ALB/TG の一時デプロイを自動化し、作�
   - `infra/20-alb` 用 README（「Runtime tfvars で apply/destroy する」「権限セットの最小要件」「ゾンビSGが残った場合の手動掃除手順」「出力アーティファクトの参照方法」）をまだ整理していない
     → 次回の Zenn/ポートフォリオ記事に載せるため、証跡ファイル名と一緒にまとめる必要あり
 
+---
+
 ## 2025-10-21
 
 ### 目的
@@ -138,14 +228,14 @@ Papyrus 環境において、ALB/TG の一時デプロイを自動化し、作�
 - [ ] /healthz を軽量実装して将来の ALB/TG ヘルスに流用
 - [ ] /dbcheck の 200 実測とレスポンス保存(今日は URL マップまで。次回、/dbcheck 実行で 200 と JSON をログに残す)
 - [x] CI の安全策
-  - [ ] コンテナ起動前テスト: python -c "from papyrus import create_app; a=create_app(); print([r.rule for r in a.url_map.iter_rules()])" を CI で回し、/dbcheck の存在を検知。
+  - [ ] コンテナ起動前テスト: `python -c "from papyrus import create_app; a=create_app(); print([r.rule for r in a.url_map.iter_rules()])"` を CI で回し、/dbcheck の存在を検知。
   - [x] ECS Exec 有効 のサービス設定 drift チェックを IaC 側に。
-- [ ] PGSSLMODE=require をタスク定義で恒久化、可能なら sslrootcert 検証まで
-- [ ] CI プリフライト: Secrets と RDS 実体の diff、RDS エンドポイント変更検知
+- [ ] `PGSSLMODE=require` をタスク定義で恒久化、可能なら sslrootcert 検証まで
+- [ ] CI プリフライト: Secrets と RDS 実体の `diff`、RDS エンドポイント変更検知
 - [ ] CloudWatch Alarm（ECSメモリ/CPU、将来のALB 5xx/応答遅延）
   - [ ] 退出コード異常（Exit 3 など）と起動失敗の CloudWatch アラームを追加。
 - [ ] RDS 初期化フローの二段化
-  - 既存の init.sql は本番データ扱い。DRYRUN と本適用をスクリプトで明確に分離し、Evidence を自動保存。
+  - 既存の `init.sql` は本番データ扱い。DRYRUN と本適用をスクリプトで明確に分離し、Evidence を自動保存。
 
 
 ## 2025-10-08 → 2025-10-17
@@ -159,34 +249,34 @@ Terraform記述のDB名、パスワードがSecretsと不整合を起こして�
 
 ### 主要変更
 
-* **ECS Exec有効化**: IAMロール修正、CloudShellからpsqlコマンド直叩きを有効化。
-* **現行Secrets検証**: `papyrus/prd/db` の `database`/`password` をRDS実体と突き合わせて確認。
-* **RDS再起動**: ParameterGroup反映確認のため再起動実施（`rds.force_ssl=1` 維持、ApplyType=dynamic確認）。
-* **Secrets更新**: `papyrus/prd/db` を正値に上書き（`database=papyrus`、正しい`password`、既存の`host/port/username`）。
-* **タスク更新**: サービスを `--force-new-deployment` で再デプロイ。必要に応じて `PGSSLMODE=require` をタスク定義へ付与し再登録。
-* **VPC内疎通確認**: ECS Exec からアプリ直叩き。`/healthz` は未実装で404、`/` は200で生存判定OK。
+- **ECS Exec有効化**: IAMロール修正、CloudShellからpsqlコマンド直叩きを有効化。
+- **現行Secrets検証**: `papyrus/prd/db` の `database`/`password` をRDS実体と突き合わせて確認。
+- **RDS再起動**: ParameterGroup反映確認のため再起動実施（`rds.force_ssl=1` 維持、ApplyType=dynamic確認）。
+- **Secrets更新**: `papyrus/prd/db` を正値に上書き（`database=papyrus`、正しい`password`、既存の`host/port/username`）。
+- **タスク更新**: サービスを `**force-new-deployment` で再デプロイ。必要に応じて `PGSSLMODE=require` をタスク定義へ付与し再登録。
+- **VPC内疎通確認**: ECS Exec からアプリ直叩き。`/healthz` は未実装で404、`/` は200で生存判定OK。
 
 ### 証跡
 
-* RDSパラメータ確認: `describe-db-parameters` で `rds.force_ssl=1 (dynamic)` を記録
-* Secrets現値・更新:
-  * `aws secretsmanager get-secret-value --secret-id papyrus/prd/db` 出力（更新前/更新後）
+- RDSパラメータ確認: `describe-db-parameters` で `rds.force_ssl=1 (dynamic)` を記録
+- Secrets現値・更新:
+  - `aws secretsmanager get-secret-value **secret-id papyrus/prd/db` 出力（更新前/更新後）
 
-* ECSデプロイ/状態:
-  * `aws ecs update-service --force-new-deployment` 実行ログ
-  * `aws ecs wait services-stable` 完了
-  * `aws ecs describe-services` で `desiredCount=1 / runningCount=1` を確認
+- ECSデプロイ/状態:
+  - `aws ecs update-service **force-new-deployment` 実行ログ
+  - `aws ecs wait services-stable` 完了
+  - `aws ecs describe-services` で `desiredCount=1 / runningCount=1` を確認
 
-* HTTP疎通（ECS Exec 内 Python）:
-  * `/healthz -> 404 Not Found`（未実装のため想定内）
-  * `/ -> 200 OK` 本文 `Welcome to Papyrus` を確認
+- HTTP疎通（ECS Exec 内 Python）:
+  - `/healthz -> 404 Not Found`（未実装のため想定内）
+  - `/ -> 200 OK` 本文 `Welcome to Papyrus` を確認
 
 ### ロールアウト
 
-* 対象: `us-west-2` の Papyrus（Fargate, cluster `papyrus-ecs-prd`, service `papyrus-task-service`）
-* 影響範囲: 新リビジョンのタスク1本のみ。ALB未連携のため外部トラフィック影響なし。
-* 認証: OIDC（既存設定）。Secrets/SSM読み取りは `papyrusTaskRole`。
-* 結果: サービス安定（`services-stable`）、アプリHTTP 200をVPC内で確認。
+- 対象: `us-west-2` の Papyrus（Fargate, cluster `papyrus-ecs-prd`, service `papyrus-task-service`）
+- 影響範囲: 新リビジョンのタスク1本のみ。ALB未連携のため外部トラフィック影響なし。
+- 認証: OIDC（既存設定）。Secrets/SSM読み取りは `papyrusTaskRole`。
+- 結果: サービス安定（`services-stable`）、アプリHTTP 200をVPC内で確認。
 
 ### 残課題
 
@@ -198,7 +288,7 @@ Terraform記述のDB名、パスワードがSecretsと不整合を起こして�
 - [ ] **監視**: CloudWatch Alarm（ECSメモリ、ALB 5xx%、TargetResponseTime）をPapyrus側にも適用。
 - [ ] **ドキュメント**: `infra/10-rds/README.md` に「手作業との差分・再起動時刻・ParameterGroup差分」を追記。
 
-
+---
 
 ## 2025-09-10
 
@@ -214,11 +304,11 @@ AWS CloudShell（アカウント: Papyrus 運用、リージョン: `us-west-2`�
 
 ### 実施内容
 
-* `cloudtrail:LookupEvents` を用いて直近90日のイベントを **NDJSON**（1行1イベント）で全件取得
-* 「Papyrus」関連のみをフィルタした派生ファイルも生成
-* それぞれを gzip 圧縮しダウンロード、`docs/evidence/cloudtrail/` に保存
+- `cloudtrail:LookupEvents` を用いて直近90日のイベントを **NDJSON**（1行1イベント）で全件取得
+- 「Papyrus」関連のみをフィルタした派生ファイルも生成
+- それぞれを gzip 圧縮しダウンロード、`docs/evidence/cloudtrail/` に保存
 
 ### 証跡
 
-* `docs/evidence/cloudtrail/<timestamp>/cloudtrail_events_<UTC>.jsonl.gz`（全イベント）
-* `docs/evidence/cloudtrail/<timestamp>/cloudtrail_events_<UTC>.papyrus.jsonl.gz`（Papyrus関連のみ）
+- `docs/evidence/cloudtrail/<timestamp>/cloudtrail_events_<UTC>.jsonl.gz`（全イベント）
+- `docs/evidence/cloudtrail/<timestamp>/cloudtrail_events_<UTC>.papyrus.jsonl.gz`（Papyrus関連のみ）
