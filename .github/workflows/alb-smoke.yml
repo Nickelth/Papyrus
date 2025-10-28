@@ -18,6 +18,40 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Preflight App Health Check
+        run: |
+          python - <<'PY'
+          from papyrus import create_app
+          app = create_app()
+          routes = sorted([r.rule for r in app.url_map.iter_rules()])
+          print("ROUTES:", routes)
+          assert "/dbcheck" in routes, "dbcheck missing"
+          assert "/healthz" in routes, "healthz missing"
+          PY
+          
+      - name: Preflight and connection information drift detection
+        run: | 
+          SEC_JSON=$(aws secretsmanager get-secret-value \
+            --secret-id papyrus/prd/db \
+            --query SecretString \
+            --output text)
+
+          EP=$(aws rds describe-db-instances \
+            --db-instance-identifier papyrus-pg16-dev \
+            --query 'DBInstances[0].Endpoint.Address' \
+            --output text)
+
+          PORT=$(aws rds describe-db-instances \
+            --db-instance-identifier papyrus-pg16-dev \
+            --query 'DBInstances[0].Endpoint.Port' \
+            --output text)
+
+          SEC_HOST=$(echo "$SEC_JSON" | jq -r .host)
+          SEC_PORT=$(echo "$SEC_JSON" | jq -r .port)
+
+          test "$SEC_HOST" = "$EP"   || { echo "FATAL: RDS endpoint drift"; exit 1; }
+          test "$SEC_PORT" = "$PORT" || { echo "FATAL: RDS port drift"; exit 1; }
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
