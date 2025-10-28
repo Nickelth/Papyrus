@@ -1,0 +1,3 @@
+"ALB_ARN=arn:aws:elasticloadbalancing:us-west-2:<ACCOUNT_ID>:loadbalancer/app/papyrus-alb/8b686be9c2d209bb"
+"ALB_SG=<sg-id>"
+"TG_ARN=arn:aws:elasticloadbalancing:us-west-2:<ACCOUNT_ID>:targetgroup/papyrus-tg/0065408eb55dba55"
