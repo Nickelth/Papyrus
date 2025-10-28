@@ -1,3 +1,100 @@
+## 2025-10-22 → 2025-10-28
+
+### 目的
+
+Papyrus 環境において、ALB/TG の一時デプロイを自動化し、作成から破棄までを CI (GitHub Actions) 上で再現可能にすること。これにより「都度手でALBを作って/残骸を消し忘れて課金・名前衝突する」というリスクを排除し、証跡（DNS名/Target Group ARN等）を自動取得できる状態まで引き上げる。
+
+### 主要変更
+
+- `alb-smoke` ワークフローを整備し、以下が 1 ジョブ内で完結するようになった。
+
+  - Terraform init/apply を実行し、Application Load Balancer / Target Group / Security Group をプロビジョニング
+  - Terraform output から ALB DNS / Target Group ARN などを収集し、ジョブ内でエクスポート
+  - 収集した出力をアーティファクトとして保存
+  - 最後に Terraform destroy を必ず実行し、ALB/TG/SG を破棄してクリーンな状態に戻す
+    （`destroy` ステップは `always` 扱いで、apply 中に失敗が出ても最終的に後片付けされる）
+
+- dev.tfvars 相当の機密値（VPC ID / サブネットID / ECSタスクSGなど）はリポジトリに含めず、GitHub Actions 実行時に一時的にファイル生成する運用に変更。
+  → 構成は IaC で再現可能、かつシークレットはリポジトリに残さない形に整理。
+
+- IAM 権限を追加し、GitHub Actions 実行ロール（`ECRPowerUser` Assumeロール）に ALB/TG/Listener 周りのライフサイクル操作が許可されるようにした。
+  具体的には以下のAPI権限を追加済み:
+
+  - `elasticloadbalancing:CreateLoadBalancer` / `DeleteLoadBalancer` / `ModifyLoadBalancerAttributes` / `DescribeLoadBalancers` / `DescribeLoadBalancerAttributes`
+  - `elasticloadbalancing:CreateTargetGroup` / `DeleteTargetGroup` / `ModifyTargetGroup` / `ModifyTargetGroupAttributes` / `DescribeTargetGroups` / `DescribeTargetGroupAttributes` / `DescribeTargetHealth` / `RegisterTargets` / `DeregisterTargets`
+  - `elasticloadbalancing:CreateListener` / `DeleteListener` / `ModifyListener` / `DescribeListeners` / `DescribeListenerAttributes` / `ModifyListenerAttributes`
+  - `elasticloadbalancing:AddTags` / `RemoveTags` / `DescribeTags`
+  - `ec2:CreateSecurityGroup` / `DeleteSecurityGroup` / `AuthorizeSecurityGroupIngress` / `RevokeSecurityGroupIngress` / `AuthorizeSecurityGroupEgress` / `RevokeSecurityGroupEgress` / `DescribeSecurityGroups` / `DescribeSecurityGroupRules` / `DescribeVpcs` / `DescribeSubnets` / `DescribeNetworkInterfaces`
+
+  これにより、前回まで発生していた以下の失敗を解消。
+
+  - `DescribeListenerAttributes` 403 により Listener 作成後の属性参照で Terraform が落ちる
+  - `ModifyLoadBalancerAttributes` / `ModifyTargetGroupAttributes` 403 により state 反映に失敗しゾンビ残留
+  - ALB/TG/SG を作った途中で CI が停止し、次回 apply 時に `InvalidGroup.Duplicate` 等で衝突する
+
+### 証跡
+
+- GitHub Actions: `alb-smoke #9`
+
+  - ステップ一覧:
+
+    - `Setup Terraform`
+    - `AWS creds` (AssumeRole 成功)
+    - `Write tfvars (runtime only)`（機密を実行時だけ生成）
+    - `Terraform apply (ALB/TG only)`
+    - `Export outputs`（ALB DNS名 / Target Group ARN 等を取得）
+    - `Save outputs artifact`（証跡をアーティファクト化）
+    - `Terraform destroy (always)`（リソースを破棄し終了時はクリーン）
+  - ジョブ全体のステータス: `succeeded`
+
+- CloudShell 側のローカル証跡:
+
+  - `*_alb_sg_leftover.json`
+
+    - 残存していた `papyrus-alb-sg` の SecurityGroupId/VpcId を記録
+  - `*_alb_sg_delete.log`
+
+    - 上記 SG の削除ログ
+  - `*_alb_sg_verify_gone.json`
+
+    - `describe-security-groups` で `papyrus-alb-sg` が空配列になることを確認
+
+- IAM 更新手順の記録:
+
+  - `ECRPowerUser` ロールに対し、ELBv2 (ALB/TargetGroup/Listener) と SG 周りの Create/Describe/Modify/Delete/TAG 系アクションを付与したインラインポリシーを適用済み
+
+### ロールアウト
+
+- `alb-smoke` ワークフローを実行することで、Papyrus用の ALB / Target Group / リスナー / セキュリティグループを一時的に構築し、Terraformの `output` を保存したうえで、同じジョブの最後で確実に破棄できるようになった。
+- これにより、手動オペレーション無しで「Papyrusの公開経路(ALB経由)を最低限のIaCで再現し、後片付けまで保証する」というスモークテストが日単位で再現可能になった。
+- 破棄が `always` 指定になっているため、apply 中に失敗しても課金リソース（ALB/TG/SG）だけ残留する事故は基本的に抑止される。
+
+### 残課題
+
+- [ ] ALB/TG 作成までは自動化済みだが、以下は未自動化:
+
+  - ECSタスクを Target Group に一時登録する処理 (`register-targets`)
+  - ALB経由で `/healthz` を叩き、200 OK を取得する疎通テストの自動実行と、そのレスポンス/ステータスの証跡化
+  - ALB→ECS 経由の `/dbcheck` 呼び出しでアプリ側 INSERT (`SKU-APP`) が成功したログを取得・保管するステップ
+
+    - 現時点では `/dbcheck` は Flask 側に追加済み、CLI経由の `SKU-CLI` INSERT は確認済みだが、ALB経由のアプリINSERT成功の証跡 (`200 OK` + JSON) はまだ未取得
+
+- [ ] タスク定義側の恒久化対応:
+
+  - `PGSSLMODE=require` を ECS タスク定義の環境変数として常設し、平文接続を防ぐ
+  - `/healthz` (DB 非依存の軽量エンドポイント) をアプリに実装し、ALB Target Group のヘルスチェックパスに使えるようにする
+    → これが入ると ALB/TG 側のヘルス確認もワークフローで自動化しやすくなる
+
+- [ ] 監視/監査系:
+
+  - `terraform apply` 時に CloudWatch Alarm (ECS Memory >80%, ALB 5xx%, TargetResponseTime p90 >1.5s 等) と SNS Topic を最小セットで同時に立て、証跡ログを取得するステップは未導入
+  - Secrets Manager (`papyrus/prd/db`) の接続情報と RDS 実体の Endpoint/DB名 の diff チェックを CI のプリフライトに入れるのは未実装
+
+- [ ] ドキュメント:
+
+  - `infra/20-alb` 用 README（「Runtime tfvars で apply/destroy する」「権限セットの最小要件」「ゾンビSGが残った場合の手動掃除手順」「出力アーティファクトの参照方法」）をまだ整理していない
+    → 次回の Zenn/ポートフォリオ記事に載せるため、証跡ファイル名と一緒にまとめる必要あり
+
 ## 2025-10-21
 
 ### 目的
@@ -17,15 +114,15 @@
 
 ### 証跡
 
-- *_schema_dryrun_exec.log, *_schema_apply_exec.log
-- *_papyrus_psql_insert_cli.log, *_papyrus_psql_insert_app.log
-- *_rds_sg_inbound_after.json
+- `*_schema_dryrun_exec.log`, `*_schema_apply_exec.log`
+- `*_papyrus_psql_insert_cli.log`, `*_papyrus_psql_insert_app.log`
+- `*_rds_sg_inbound_after.json`
 - 実行中イメージ
-  - *_running_image.log
+  - `*_running_image.log`
 - URLマップ
-  - *_flask_url_map_after.log
+  - `*_flask_url_map_after.log`
 - /dbcheck 叩き込みログ（prefix 探査スクリプト込み）
-  - *_papyrus_psql_insert_app.log
+  - `*_papyrus_psql_insert_app.log`
 - サービス更新・安定待ち関連（必要に応じて script ログに追記）
 
 ### ロールアウト
@@ -40,9 +137,9 @@
 
 - [ ] /healthz を軽量実装して将来の ALB/TG ヘルスに流用
 - [ ] /dbcheck の 200 実測とレスポンス保存(今日は URL マップまで。次回、/dbcheck 実行で 200 と JSON をログに残す)
-- [ ] CI の安全策
+- [x] CI の安全策
   - [ ] コンテナ起動前テスト: python -c "from papyrus import create_app; a=create_app(); print([r.rule for r in a.url_map.iter_rules()])" を CI で回し、/dbcheck の存在を検知。
-  - [ ] ECS Exec 有効 のサービス設定 drift チェックを IaC 側に。
+  - [x] ECS Exec 有効 のサービス設定 drift チェックを IaC 側に。
 - [ ] PGSSLMODE=require をタスク定義で恒久化、可能なら sslrootcert 検証まで
 - [ ] CI プリフライト: Secrets と RDS 実体の diff、RDS エンドポイント変更検知
 - [ ] CloudWatch Alarm（ECSメモリ/CPU、将来のALB 5xx/応答遅延）
@@ -95,7 +192,7 @@ Terraform記述のDB名、パスワードがSecretsと不整合を起こして�
 
 - [ ] **ヘルスエンドポイント実装**: `/healthz` をDB非依存で200返す軽量版で追加。将来ALB/TGのHCに流用。
 - [ ] **ALB/TG連結の最小化**: `containerName=app`/`containerPort=5000` でターゲット登録。ALBアクセスログ先S3だけ先に用意。
-- [ ] **DB経由の実証**: 一時エンドポイント `/dbcheck` 等で `INSERT 0 1` をアプリ経由で実演し証跡化。
+- [x] **DB経由の実証**: 一時エンドポイント `/dbcheck` 等で `INSERT 0 1` をアプリ経由で実演し証跡化。
 - [ ] **SSLの恒久化**: タスク定義に `PGSSLMODE=require` を常設。可能なら `sslrootcert=rds-combined-ca-bundle.pem` を同梱して検証強化。
 - [ ] **CIプリフライト**: デプロイ前に「SecretsとRDS実体のdiffチェック」をWorkflowに追加（`DBName/Endpoint/Port/Username`）。
 - [ ] **監視**: CloudWatch Alarm（ECSメモリ、ALB 5xx%、TargetResponseTime）をPapyrus側にも適用。
