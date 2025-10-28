@@ -28,8 +28,8 @@ jobs:
         working-directory: infra/20-alb
         run: |
           cat > dev.auto.tfvars <<'TFV'
-          vpc_id            = "${VPC_ID}"
-          public_subnet_ids = "${PUBLIC_SUBNET_IDS_JSON}"
+          vpc_id            = ${{ env.VPC_ID }}
+          public_subnet_ids = ${{ env.PUBLIC_SUBNET_IDS_JSON }}
           container_port    = 5000
           allow_cidrs       = ["0.0.0.0/0"]
           TFV
