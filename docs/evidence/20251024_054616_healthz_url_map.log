@@ -1,0 +1,34 @@
+
+The Session Manager plugin was installed successfully. Use the AWS CLI to start a session.
+
+
+Starting session with SessionId: ecs-execute-command-shjpg669quizqsrs3nnlt3anaq
+[cfg] fetching SSM param: /papyrus/prd/auth0/callback_url
+Map([<Rule '/static/<filename>' (HEAD, OPTIONS, GET) -> static>,
+ <Rule '/' (HEAD, OPTIONS, GET) -> home>,
+ <Rule '/index' (HEAD, OPTIONS, GET) -> index>,
+ <Rule '/index' (POST, OPTIONS) -> handle_submit>,
+ <Rule '/generate_pdf' (POST, OPTIONS) -> generate_pdf>,
+ <Rule '/api/product_by_sku' (HEAD, OPTIONS, GET) -> product_by_sku>,
+ <Rule '/api/product_by_name' (HEAD, OPTIONS, GET) -> product_by_name>,
+ <Rule '/login' (HEAD, OPTIONS, GET) -> login>,
+ <Rule '/callback' (HEAD, OPTIONS, GET) -> callback>,
+ <Rule '/logout' (HEAD, OPTIONS, GET) -> logout>,
+ <Rule '/dbcheck' (HEAD, OPTIONS, GET) -> dbcheck.dbcheck>,
+ <Rule '/healthz' (HEAD, OPTIONS, GET) -> healthz.healthz>])
+/static/<path:filename> ['GET', 'HEAD', 'OPTIONS']
+/ ['GET', 'HEAD', 'OPTIONS']
+/index ['GET', 'HEAD', 'OPTIONS']
+/index ['OPTIONS', 'POST']
+/generate_pdf ['OPTIONS', 'POST']
+/api/product_by_sku ['GET', 'HEAD', 'OPTIONS']
+/api/product_by_name ['GET', 'HEAD', 'OPTIONS']
+/login ['GET', 'HEAD', 'OPTIONS']
+/callback ['GET', 'HEAD', 'OPTIONS']
+/logout ['GET', 'HEAD', 'OPTIONS']
+/dbcheck ['GET', 'HEAD', 'OPTIONS']
+/healthz ['GET', 'HEAD', 'OPTIONS']
+
+
+Exiting session with sessionId: ecs-execute-command-shjpg669quizqsrs3nnlt3anaq.
+

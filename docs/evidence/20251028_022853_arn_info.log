@@ -1,0 +1,3 @@
+"ALB_ARN=arn:aws:elasticloadbalancing:us-west-2:438336773404:loadbalancer/app/papyrus-alb/8b686be9c2d209bb"
+"ALB_SG=sg-06c4226fecb543f84"
+"TG_ARN=arn:aws:elasticloadbalancing:us-west-2:438336773404:targetgroup/papyrus-tg/0065408eb55dba55"
