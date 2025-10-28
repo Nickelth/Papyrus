@@ -119,19 +119,34 @@ jobs:
       - name: Smoke hit /healthz and /dbcheck
         run: |
           set -euo pipefail
-          mkdir -p evidence
+
+          EVID_DIR="evidence"
+          mkdir -p "$EVID_DIR"
+
           DNS="${{ steps.outs.outputs.alb_dns }}"
           TS=$(date +%Y%m%d_%H%M%S)
 
-          echo "[INFO] curl /healthz" | tee "~/papyrus-invoice/docs/evidence/${TS}_healthz.log"
+          HEALTHZ_LOG="$EVID_DIR/${TS}_healthz.log"
+          DBCHECK_LOG="$EVID_DIR/${TS}_dbcheck.log"
+
+          echo "[INFO] curl /healthz" | tee "$HEALTHZ_LOG" || true
           curl -si "http://$DNS/healthz" \
-            | tee -a "~/papyrus-invoice/docs/evidence/${TS}_healthz.log" \
+            | tee -a "$HEALTHZ_LOG" \
             || true
 
-          echo "[INFO] curl /dbcheck" | tee "~/papyrus-invoice/docs/evidence/${TS}_dbcheck.log"
+          echo "[INFO] curl /dbcheck" | tee "$DBCHECK_LOG" || true
           curl -si "http://$DNS/dbcheck" \
-            | tee -a "~/papyrus-invoice/docs/evidence/${TS}_dbcheck.log" \
+            | tee -a "$DBCHECK_LOG" \
             || true
+
+      - name: Upload smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-${{ github.run_id }}
+          path: |
+            evidence/
+            infra/20-alb/terraform.tfstate
 
       - name: Save outputs artifact
         uses: actions/upload-artifact@v4
@@ -139,7 +154,7 @@ jobs:
           name: alb-smoke-artifacts
           path: |
             infra/20-alb/terraform.tfstate
-            ~/papyrus-invoice/docs/evidence/*.log
+            evidence/*.log
 
       - name: Terraform destroy (always)
         if: always()
