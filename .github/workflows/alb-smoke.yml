@@ -40,7 +40,7 @@ jobs:
         run: |
           terraform init -input=false -upgrade=false
           terraform validate
-          terraform apply -auto-approve -var-file=dev.tfvars
+          terraform apply -auto-approve -var-file=dev.auto.tfvars
       - name: Export outputs
         id: outs
         working-directory: infra/20-alb
@@ -56,4 +56,4 @@ jobs:
       - name: Terraform destroy (always)
         if: always()
         working-directory: infra/20-alb
-        run: terraform destroy -auto-approve -var-file=dev.tfvars
+        run: terraform destroy -auto-approve -var-file=dev.auto.tfvars
