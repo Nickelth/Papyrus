@@ -1,0 +1,7 @@
+{
+    "Arn": "arn:aws:elasticloadbalancing:us-west-2:<ACCOUNT_ID>:loadbalancer/app/papyrus-alb/0d0b42bc41050510",
+    "DNS": "<ALB_DNS>",
+    "SGs": [
+        "<sg-id>"
+    ]
+}
