@@ -1,0 +1,61 @@
+{
+  "image": "<ECR_REGISTRY>/papyrus:latest",
+  "environment": [
+    {
+      "name": "AWS_REGION",
+      "value": "us-west-2"
+    },
+    {
+      "name": "APP_ENV",
+      "value": "production"
+    },
+    {
+      "name": "DB_SECRET_ID",
+      "value": "papyrus/prd/db"
+    },
+    {
+      "name": "AUTH0_CALLBACK",
+      "value": "/papyrus/prd/auth0/callback_url"
+    },
+    {
+      "name": "AUTH0_SECRET_ID",
+      "value": "papyrus/prd/auth0"
+    },
+    {
+      "name": "FLASK_SECRET_ID",
+      "value": "papyrus/prd/flask"
+    },
+    {
+      "name": "GUNICORN_TIMEOUT",
+      "value": "60"
+    },
+    {
+      "name": "PGSSLMODE",
+      "value": "require"
+    },
+    {
+      "name": "GUNICORN_MAX_REQUESTS_JITTER",
+      "value": "50"
+    },
+    {
+      "name": "CONFIG_BACKEND",
+      "value": "aws"
+    },
+    {
+      "name": "GUNICORN_WORKERS",
+      "value": "2"
+    },
+    {
+      "name": "GUNICORN_MAX_REQUESTS",
+      "value": "200"
+    },
+    {
+      "name": "GUNICORN_THREADS",
+      "value": "2"
+    },
+    {
+      "name": "PGSSLMODE",
+      "value": "require"
+    }
+  ]
+}
