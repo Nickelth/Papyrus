@@ -18,6 +18,9 @@ variable "allow_cidrs" {
   type = list(string)
   default = ["0.0.0.0/0"] 
 }
+variable "ecs_tasks_sg_id" {
+  type = string
+}
 
 resource "aws_security_group" "alb" {
   name        = "papyrus-alb-sg"
@@ -38,6 +41,15 @@ resource "aws_security_group" "alb" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+}
+
+resource "aws_vpc_security_group_ingress_rule" "alb_to_tasks_5000" {
+  security_group_id            = var.ecs_tasks_sg_id
+  referenced_security_group_id = aws_security_group.alb.id
+  ip_protocol                  = "tcp"
+  from_port                    = 5000
+  to_port                      = 5000
+  description                  = "ALB to ECS task 5000"
 }
 
 resource "aws_lb" "this" {
@@ -62,7 +74,7 @@ resource "aws_lb_target_group" "this" {
     unhealthy_threshold = 2
     interval            = 10
     timeout             = 5
-    path                = "/healthz"
+    path                = "/"
     matcher             = "200-399"
   }
 }
