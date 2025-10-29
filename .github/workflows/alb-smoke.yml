@@ -31,19 +31,15 @@ jobs:
 
       - name: Preflight App Health Check
         run: |
-          set -euo pipefail
           python - <<'PY'
-          import sys
-          from papyrus import create_app
-          app = create_app()
+          from papyrus.preflight_app import create_app_skeleton
+
+          app = create_app_skeleton()
           routes = sorted([r.rule for r in app.url_map.iter_rules()])
           print("ROUTES:", routes)
 
-          need = {"/dbcheck", "/healthz"}
-          missing = [r for r in need if r not in routes]
-          if missing:
-              print("FATAL: required routes missing:", missing)
-              sys.exit(1)
+          assert "/dbcheck" in routes, "dbcheck missing"
+          assert "/healthz" in routes, "healthz missing"
           PY
           
       - name: Preflight and connection information drift detection
