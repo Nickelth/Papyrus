@@ -162,18 +162,63 @@ jobs:
             echo "task_ip=$TASK_IP"
           } >> $GITHUB_OUTPUT
 
+      - name: ECS task inspect (get IP and SG)
+        id: ecsinfo
+        run: |
+          set -euo pipefail
+          CLUSTER="papyrus-ecs-prd"
+          SERVICE="papyrus-task-service"
+          REGION="${{ env.AWS_REGION }}"
+
+          TASK_ARN=$(aws ecs list-tasks \
+            --cluster "$CLUSTER" \
+            --service-name "$SERVICE" \
+            --desired-status RUNNING \
+            --region "$REGION" \
+            --query 'taskArns[0]' \
+            --output text)
+
+          if [ -z "$TASK_ARN" ] || [ "$TASK_ARN" = "None" ]; then
+            echo "[FATAL] no RUNNING task found" >&2
+            exit 1
+          fi
+
+          ENI_ID=$(aws ecs describe-tasks \
+            --cluster "$CLUSTER" \
+            --tasks "$TASK_ARN" \
+            --region "$REGION" \
+            --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' \
+            --output text)
+
+          TASK_IP=$(aws ec2 describe-network-interfaces \
+            --network-interface-ids "$ENI_ID" \
+            --region "$REGION" \
+            --query 'NetworkInterfaces[0].PrivateIpAddress' \
+            --output text)
+
+          ECS_TASK_SG=$(aws ec2 describe-network-interfaces \
+            --network-interface-ids "$ENI_ID" \
+            --region "$REGION" \
+            --query 'NetworkInterfaces[0].Groups[0].GroupId' \
+            --output text)
+
+          echo "task_arn=$TASK_ARN"        >> $GITHUB_OUTPUT
+          echo "task_ip=$TASK_IP"          >> $GITHUB_OUTPUT
+          echo "ecs_task_sg=$ECS_TASK_SG"  >> $GITHUB_OUTPUT
+
       - name: Authorize ALB -> ECS task SG ingress
         run: |
           set -euo pipefail
+          REGION="${{ env.AWS_REGION }}"
           ALB_SG="${{ steps.outs.outputs.alb_sg_id }}"
-          TASK_SG="${{ steps.outs.outputs.task_sg_id }}"
-          PORT="${{ env.CONTAINER_PORT }}"
+          ECS_TASK_SG="${{ steps.ecsinfo.outputs.ecs_task_sg }}"
 
-          echo "[INFO] authorizing $ALB_SG -> $TASK_SG tcp/$PORT"
+          echo "[INFO] authorizing $ALB_SG -> $ECS_TASK_SG tcp/5000"
 
           set +e
           OUT=$(aws ec2 authorize-security-group-ingress \
             --group-id "$ECS_TASK_SG" \
+            --region "$REGION" \
             --ip-permissions "IpProtocol=tcp,FromPort=5000,ToPort=5000,UserIdGroupPairs=[{GroupId=$ALB_SG}]" \
             2>&1)
           RC=$?
@@ -191,12 +236,6 @@ jobs:
           else
             echo "[INFO] ingress created"
           fi
-
-          echo "[INFO] current ingress on task SG:"
-          aws ec2 describe-security-groups \
-            --group-ids "$TASK_SG" \
-            --query 'SecurityGroups[0].IpPermissions' \
-            --output json
 
       - name: Register target
         run: |
