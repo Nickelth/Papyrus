@@ -1,4 +1,4 @@
-name: ALB Smoke
+name: Papyrus Smoke
 on: workflow_dispatch
 permissions:
   id-token: write
