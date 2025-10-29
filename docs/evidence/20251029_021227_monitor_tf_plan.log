@@ -1,0 +1,104 @@
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [32m+[0m create[0m
+
+Terraform will perform the following actions:
+
+[1m  # aws_cloudwatch_metric_alarm.alb_5xx[0m will be created
+[0m  [32m+[0m[0m resource "aws_cloudwatch_metric_alarm" "alb_5xx" {
+      [32m+[0m[0m actions_enabled                       = true
+      [32m+[0m[0m alarm_actions                         = (known after apply)
+      [32m+[0m[0m alarm_description                     = "ALB is serving 5xx > 1 in 5 min window"
+      [32m+[0m[0m alarm_name                            = "papyrus-alb-5xx-gt1"
+      [32m+[0m[0m arn                                   = (known after apply)
+      [32m+[0m[0m comparison_operator                   = "GreaterThanThreshold"
+      [32m+[0m[0m dimensions                            = {
+          [32m+[0m[0m "LoadBalancer" = "app/papyrus-alb/0d0b42bc41050510"
+        }
+      [32m+[0m[0m evaluate_low_sample_count_percentiles = (known after apply)
+      [32m+[0m[0m evaluation_periods                    = 2
+      [32m+[0m[0m id                                    = (known after apply)
+      [32m+[0m[0m metric_name                           = "HTTPCode_ELB_5XX_Count"
+      [32m+[0m[0m namespace                             = "AWS/ApplicationELB"
+      [32m+[0m[0m ok_actions                            = (known after apply)
+      [32m+[0m[0m period                                = 300
+      [32m+[0m[0m region                                = "us-west-2"
+      [32m+[0m[0m statistic                             = "Sum"
+      [32m+[0m[0m tags_all                              = (known after apply)
+      [32m+[0m[0m threshold                             = 1
+      [32m+[0m[0m treat_missing_data                    = "notBreaching"
+    }
+
+[1m  # aws_cloudwatch_metric_alarm.alb_latency[0m will be created
+[0m  [32m+[0m[0m resource "aws_cloudwatch_metric_alarm" "alb_latency" {
+      [32m+[0m[0m actions_enabled                       = true
+      [32m+[0m[0m alarm_actions                         = (known after apply)
+      [32m+[0m[0m alarm_description                     = "TargetResponseTime p90 > 1.5s (bad latency)"
+      [32m+[0m[0m alarm_name                            = "papyrus-alb-p90-gt1_5s"
+      [32m+[0m[0m arn                                   = (known after apply)
+      [32m+[0m[0m comparison_operator                   = "GreaterThanThreshold"
+      [32m+[0m[0m dimensions                            = {
+          [32m+[0m[0m "LoadBalancer" = "app/papyrus-alb/0d0b42bc41050510"
+          [32m+[0m[0m "TargetGroup"  = "targetgroup/papyrus-tg/500b6c4de7d2acaa"
+        }
+      [32m+[0m[0m evaluate_low_sample_count_percentiles = (known after apply)
+      [32m+[0m[0m evaluation_periods                    = 2
+      [32m+[0m[0m extended_statistic                    = "p90"
+      [32m+[0m[0m id                                    = (known after apply)
+      [32m+[0m[0m metric_name                           = "TargetResponseTime"
+      [32m+[0m[0m namespace                             = "AWS/ApplicationELB"
+      [32m+[0m[0m ok_actions                            = (known after apply)
+      [32m+[0m[0m period                                = 300
+      [32m+[0m[0m region                                = "us-west-2"
+      [32m+[0m[0m tags_all                              = (known after apply)
+      [32m+[0m[0m threshold                             = 1.5
+      [32m+[0m[0m treat_missing_data                    = "notBreaching"
+    }
+
+[1m  # aws_cloudwatch_metric_alarm.ecs_mem_hi[0m will be created
+[0m  [32m+[0m[0m resource "aws_cloudwatch_metric_alarm" "ecs_mem_hi" {
+      [32m+[0m[0m actions_enabled                       = true
+      [32m+[0m[0m alarm_actions                         = (known after apply)
+      [32m+[0m[0m alarm_description                     = "ECS service memory >80% (papyrus papyrus-task-service)"
+      [32m+[0m[0m alarm_name                            = "papyrus-ecs-mem-gt80"
+      [32m+[0m[0m arn                                   = (known after apply)
+      [32m+[0m[0m comparison_operator                   = "GreaterThanThreshold"
+      [32m+[0m[0m dimensions                            = {
+          [32m+[0m[0m "ClusterName" = "papyrus-ecs-prd"
+          [32m+[0m[0m "ServiceName" = "papyrus-task-service"
+        }
+      [32m+[0m[0m evaluate_low_sample_count_percentiles = (known after apply)
+      [32m+[0m[0m evaluation_periods                    = 2
+      [32m+[0m[0m id                                    = (known after apply)
+      [32m+[0m[0m metric_name                           = "MemoryUtilization"
+      [32m+[0m[0m namespace                             = "AWS/ECS"
+      [32m+[0m[0m ok_actions                            = (known after apply)
+      [32m+[0m[0m period                                = 300
+      [32m+[0m[0m region                                = "us-west-2"
+      [32m+[0m[0m statistic                             = "Average"
+      [32m+[0m[0m tags_all                              = (known after apply)
+      [32m+[0m[0m threshold                             = 80
+      [32m+[0m[0m treat_missing_data                    = "breaching"
+    }
+
+[1m  # aws_sns_topic.ops[0m will be created
+[0m  [32m+[0m[0m resource "aws_sns_topic" "ops" {
+      [32m+[0m[0m arn                         = (known after apply)
+      [32m+[0m[0m beginning_archive_time      = (known after apply)
+      [32m+[0m[0m content_based_deduplication = false
+      [32m+[0m[0m fifo_throughput_scope       = (known after apply)
+      [32m+[0m[0m fifo_topic                  = false
+      [32m+[0m[0m id                          = (known after apply)
+      [32m+[0m[0m name                        = "papyrus-ops-alerts"
+      [32m+[0m[0m name_prefix                 = (known after apply)
+      [32m+[0m[0m owner                       = (known after apply)
+      [32m+[0m[0m policy                      = (known after apply)
+      [32m+[0m[0m region                      = "us-west-2"
+      [32m+[0m[0m signature_version           = (known after apply)
+      [32m+[0m[0m tags_all                    = (known after apply)
+      [32m+[0m[0m tracing_config              = (known after apply)
+    }
+
+[1mPlan:[0m 4 to add, 0 to change, 0 to destroy.
+[0m
