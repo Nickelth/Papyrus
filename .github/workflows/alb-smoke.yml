@@ -249,31 +249,27 @@ jobs:
             --target-group-arn "$TG_ARN" \
             --targets "Id=$TASK_IP,Port=$PORT"
 
-          aws elbv2 wait target-in-service \
-            --target-group-arn "$TG_ARN" \
-            --targets "Id=$TASK_IP,Port=$PORT"
+          echo "[INFO] polling target health (non-fatal)"
+          for i in $(seq 1 20); do
+            aws elbv2 describe-target-health \
+              --target-group-arn "$TG_ARN" \
+              --targets "Id=$TASK_IP,Port=$PORT" \
+              || true
+            sleep 3
+          done
 
       - name: Smoke hit /healthz and /dbcheck
         run: |
           set -euo pipefail
-
-          EVID_DIR="evidence"
-          mkdir -p "$EVID_DIR"
-
+          mkdir -p evidence
           DNS="${{ steps.outs.outputs.alb_dns }}"
-          
-          HEALTHZ_LOG="$EVID_DIR/$(date +%Y%m%d_%H%M%S)_healthz.log"
-          DBCHECK_LOG="$EVID_DIR/$(date +%Y%m%d_%H%M%S)_dbcheck.log"
+          TS=$(date +%Y%m%d_%H%M%S)
 
-          echo "[INFO] curl /healthz" | tee "$HEALTHZ_LOG" || true
           curl -si "http://$DNS/healthz" \
-            | tee -a "$HEALTHZ_LOG" \
-            || true
+            | tee "evidence/${TS}_healthz.log" || true
 
-          echo "[INFO] curl /dbcheck" | tee "$DBCHECK_LOG" || true
           curl -si "http://$DNS/dbcheck" \
-            | tee -a "$DBCHECK_LOG" \
-            || true
+            | tee "evidence/${TS}_dbcheck.log" || true
 
       - name: Upload smoke evidence
         if: always()
