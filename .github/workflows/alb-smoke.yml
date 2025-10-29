@@ -115,10 +115,10 @@ jobs:
           test -n "$ALB_SG"  || { echo "FATAL: alb_sg_id empty"; exit 1; }
           test -n "$TASK_SG" || { echo "FATAL: task_sg_id empty (check secret ECS_TASK_SG_ID)"; exit 1; }
 
-          echo "alb_dns=$ALB_DNS"            >> $GITHUB_OUTPUT
-          echo "tg_arn=$TG_ARN"              >> $GITHUB_OUTPUT
-          echo "alb_sg_id=$ALB_SG"           >> $GITHUB_OUTPUT
-          echo "task_sg_id=$TASK_SG"         >> $GITHUB_OUTPUT
+          echo "alb_dns=$ALB_DNS"    >> $GITHUB_OUTPUT
+          echo "tg_arn=$TG_ARN"      >> $GITHUB_OUTPUT
+          echo "alb_sg_id=$ALB_SG"   >> $GITHUB_OUTPUT
+          echo "task_sg_id=$TASK_SG" >> $GITHUB_OUTPUT
 
       - name: Save outputs artifact
         uses: actions/upload-artifact@v4
@@ -241,9 +241,14 @@ jobs:
         if: always()
         run: |
           set -euo pipefail
-          ALB_SG="${{ steps.outs.outputs.alb_sg_id }}"
-          TASK_SG="${{ steps.outs.outputs.task_sg_id }}"
+          ALB_SG="${{ steps.outs.outputs.alb_sg_id || '' }}"
+          TASK_SG="${{ steps.outs.outputs.task_sg_id || '' }}"
           PORT="${{ env.CONTAINER_PORT }}"
+
+          if [ -z "$ALB_SG" ] || [ -z "$TASK_SG" ]; then
+            echo "[WARN] skip revoke: ALB_SG or TASK_SG empty"
+            exit 0
+          fi
 
           echo "[INFO] revoking $ALB_SG -> $TASK_SG tcp/$PORT"
 
