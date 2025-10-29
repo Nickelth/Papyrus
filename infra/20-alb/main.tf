@@ -51,7 +51,7 @@ resource "aws_vpc_security_group_ingress_rule" "alb_to_tasks_5000" {
   ip_protocol                  = "tcp"
   from_port                    = 5000
   to_port                      = 5000
-  description                  = "ALB to ECS task 5000"
+  description                  = "ALB to ECS task ${var.container_port}"
 }
 
 resource "aws_lb" "this" {
