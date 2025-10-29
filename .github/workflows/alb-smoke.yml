@@ -128,7 +128,6 @@ jobs:
             infra/20-alb/terraform.tfstate
 
       - name: Resolve ECS task IP
-        id: ecsinfo
         run: |
           set -euo pipefail
 
