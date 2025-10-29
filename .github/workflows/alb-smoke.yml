@@ -171,18 +171,26 @@ jobs:
 
           echo "[INFO] authorizing $ALB_SG -> $TASK_SG tcp/$PORT"
 
-          aws ec2 authorize-security-group-ingress \
-            --group-id "$TASK_SG" \
-            --ip-permissions "IpProtocol=tcp,FromPort=$PORT,ToPort=$PORT,UserIdGroupPairs=[{GroupId=$ALB_SG}]" \
-            || {
-              RC=$?
-              if [ "$RC" -eq 255 ]; then
-                echo "[WARN] ingress rule already exists, continuing"
-              else
-                echo "[FATAL] unexpected error from authorize-security-group-ingress (code $RC)"
-                exit $RC
-              fi
-            }
+          set +e
+          OUT=$(aws ec2 authorize-security-group-ingress \
+            --group-id "$ECS_TASK_SG" \
+            --ip-permissions "IpProtocol=tcp,FromPort=5000,ToPort=5000,UserIdGroupPairs=[{GroupId=$ALB_SG}]" \
+            2>&1)
+          RC=$?
+          set -e
+
+          if [ $RC -ne 0 ]; then
+            echo "$OUT" | grep -q 'InvalidPermission.Duplicate'
+            if [ $? -eq 0 ]; then
+              echo "[WARN] ingress already existed, continuing"
+            else
+              echo "$OUT" >&2
+              echo "[FATAL] unexpected error from authorize-security-group-ingress (code $RC)" >&2
+              exit $RC
+            fi
+          else
+            echo "[INFO] ingress created"
+          fi
 
           echo "[INFO] current ingress on task SG:"
           aws ec2 describe-security-groups \
