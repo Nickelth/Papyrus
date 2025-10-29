@@ -1,0 +1,1 @@
+NEW_TD_ARN=arn:aws:ecs:us-west-2:<ACCOUNT_ID>:task-definition/papyrus-task:44

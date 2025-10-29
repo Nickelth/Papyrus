@@ -1,0 +1,10 @@
+
+The Session Manager plugin was installed successfully. Use the AWS CLI to start a session.
+
+
+Starting session with SessionId: ecs-execute-command-ajzq5cqyi3ag2rz8u2goyuulpy
+PGSSLMODE=require
+
+
+Exiting session with sessionId: ecs-execute-command-ajzq5cqyi3ag2rz8u2goyuulpy.
+
