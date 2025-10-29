@@ -1,0 +1,10 @@
+
+The Session Manager plugin was installed successfully. Use the AWS CLI to start a session.
+
+
+Starting session with SessionId: ecs-execute-command-zksyalk84paa4fk9ghxooj2s8a
+ROWS: [('SKU-CLI', 'health', 0), ('SKU-APP', 'health', 0)]
+
+
+Exiting session with sessionId: ecs-execute-command-zksyalk84paa4fk9ghxooj2s8a.
+
