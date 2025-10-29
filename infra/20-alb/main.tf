@@ -44,16 +44,6 @@ resource "aws_security_group" "alb" {
   }
 }
 
-resource "aws_vpc_security_group_ingress_rule" "alb_to_tasks_5000" {
-  count = var.ecs_tasks_sg_id == null ? 0 : 1
-  security_group_id            = var.ecs_tasks_sg_id
-  referenced_security_group_id = aws_security_group.alb.id
-  ip_protocol                  = "tcp"
-  from_port                    = 5000
-  to_port                      = 5000
-  description                  = "ALB to ECS task ${var.container_port}"
-}
-
 resource "aws_lb" "this" {
   name                       = "papyrus-alb"
   load_balancer_type         = "application"
