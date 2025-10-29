@@ -105,8 +105,20 @@ jobs:
         id: outs
         working-directory: infra/20-alb
         run: |
-          echo "alb_dns=$(terraform output -raw alb_dns_name)" >> $GITHUB_OUTPUT
-          echo "tg_arn=$(terraform output -raw tg_arn)" >> $GITHUB_OUTPUT
+          set -euo pipefail
+
+          ALB_DNS=$(terraform output -raw alb_dns_name)
+          TG_ARN=$(terraform output -raw tg_arn)
+          ALB_SG=$(terraform output -raw alb_sg_id)
+          TASK_SG="${{ secrets.ECS_TASK_SG_ID }}"
+
+          test -n "$ALB_SG"  || { echo "FATAL: alb_sg_id empty"; exit 1; }
+          test -n "$TASK_SG" || { echo "FATAL: task_sg_id empty (check secret ECS_TASK_SG_ID)"; exit 1; }
+
+          echo "alb_dns=$ALB_DNS"            >> $GITHUB_OUTPUT
+          echo "tg_arn=$TG_ARN"              >> $GITHUB_OUTPUT
+          echo "alb_sg_id=$ALB_SG"           >> $GITHUB_OUTPUT
+          echo "task_sg_id=$TASK_SG"         >> $GITHUB_OUTPUT
 
       - name: Save outputs artifact
         uses: actions/upload-artifact@v4
@@ -153,7 +165,6 @@ jobs:
       - name: Authorize ALB -> ECS task SG ingress
         run: |
           set -euo pipefail
-          TG_ARN="${{ steps.outs.outputs.tg_arn }}"
           ALB_SG="${{ steps.outs.outputs.alb_sg_id }}"
           TASK_SG="${{ steps.outs.outputs.task_sg_id }}"
           PORT="${{ env.CONTAINER_PORT }}"
@@ -195,10 +206,9 @@ jobs:
           mkdir -p "$EVID_DIR"
 
           DNS="${{ steps.outs.outputs.alb_dns }}"
-          TS=$(date +%Y%m%d_%H%M%S)
-
-          HEALTHZ_LOG="$EVID_DIR/${TS}_healthz.log"
-          DBCHECK_LOG="$EVID_DIR/${TS}_dbcheck.log"
+          
+          HEALTHZ_LOG="$EVID_DIR/$(date +%Y%m%d_%H%M%S)_healthz.log"
+          DBCHECK_LOG="$EVID_DIR/$(date +%Y%m%d_%H%M%S)_dbcheck.log"
 
           echo "[INFO] curl /healthz" | tee "$HEALTHZ_LOG" || true
           curl -si "http://$DNS/healthz" \
