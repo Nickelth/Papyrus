@@ -1,4 +1,4 @@
-name: alb-smoke
+name: ALB Smoke
 on: workflow_dispatch
 permissions:
   id-token: write
@@ -18,36 +18,63 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Python deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: AWS creds
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
       - name: Preflight App Health Check
         run: |
+          set -euo pipefail
           python - <<'PY'
+          import sys
           from papyrus import create_app
           app = create_app()
           routes = sorted([r.rule for r in app.url_map.iter_rules()])
           print("ROUTES:", routes)
-          assert "/dbcheck" in routes, "dbcheck missing"
-          assert "/healthz" in routes, "healthz missing"
+
+          need = {"/dbcheck", "/healthz"}
+          missing = [r for r in need if r not in routes]
+          if missing:
+              print("FATAL: required routes missing:", missing)
+              sys.exit(1)
           PY
           
       - name: Preflight and connection information drift detection
-        run: | 
+        env:
+          AWS_REGION: ${{ env.AWS_REGION }}
+        run: |
+          set -euo pipefail
+
           SEC_JSON=$(aws secretsmanager get-secret-value \
             --secret-id papyrus/prd/db \
+            --region "$AWS_REGION" \
             --query SecretString \
             --output text)
 
           EP=$(aws rds describe-db-instances \
             --db-instance-identifier papyrus-pg16-dev \
+            --region "$AWS_REGION" \
             --query 'DBInstances[0].Endpoint.Address' \
             --output text)
 
           PORT=$(aws rds describe-db-instances \
             --db-instance-identifier papyrus-pg16-dev \
+            --region "$AWS_REGION" \
             --query 'DBInstances[0].Endpoint.Port' \
             --output text)
 
           SEC_HOST=$(echo "$SEC_JSON" | jq -r .host)
           SEC_PORT=$(echo "$SEC_JSON" | jq -r .port)
+
+          echo "[INFO] SEC_HOST=$SEC_HOST RDS_HOST=$EP"
+          echo "[INFO] SEC_PORT=$SEC_PORT RDS_PORT=$PORT"
 
           test "$SEC_HOST" = "$EP"   || { echo "FATAL: RDS endpoint drift"; exit 1; }
           test "$SEC_PORT" = "$PORT" || { echo "FATAL: RDS port drift"; exit 1; }
@@ -57,12 +84,6 @@ jobs:
         with:
           terraform_version: 1.7.5
           terraform_wrapper: false
-
-      - name: AWS creds
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
 
       - name: Write tfvars (runtime only)
         working-directory: infra/20-alb
