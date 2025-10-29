@@ -150,6 +150,26 @@ jobs:
             echo "task_ip=$TASK_IP"
           } >> $GITHUB_OUTPUT
 
+      - name: Authorize ALB -> ECS task SG ingress
+        run: |
+          set -euo pipefail
+          TG_ARN="${{ steps.outs.outputs.tg_arn }}"
+          ALB_SG="${{ steps.outs.outputs.alb_sg_id }}"
+          TASK_SG="${{ steps.outs.outputs.task_sg_id }}"
+          PORT="${{ env.CONTAINER_PORT }}"
+
+          echo "[INFO] authorizing $ALB_SG -> $TASK_SG tcp/$PORT"
+
+          aws ec2 authorize-security-group-ingress \
+            --group-id "$TASK_SG" \
+            --ip-permissions "IpProtocol=tcp,FromPort=$PORT,ToPort=$PORT,UserIdGroupPairs=[{GroupId=$ALB_SG,Description=alb-smoke-temp}]"
+
+          echo "[INFO] current ingress on task SG:"
+          aws ec2 describe-security-groups \
+            --group-ids "$TASK_SG" \
+            --query 'SecurityGroups[0].IpPermissions' \
+            --output json
+
       - name: Register target
         run: |
           set -euo pipefail
@@ -206,6 +226,20 @@ jobs:
           path: |
             infra/20-alb/terraform.tfstate
             evidence/*.log
+
+      - name: Revoke ALB -> ECS task SG ingress (cleanup)
+        if: always()
+        run: |
+          set -euo pipefail
+          ALB_SG="${{ steps.outs.outputs.alb_sg_id }}"
+          TASK_SG="${{ steps.outs.outputs.task_sg_id }}"
+          PORT="${{ env.CONTAINER_PORT }}"
+
+          echo "[INFO] revoking $ALB_SG -> $TASK_SG tcp/$PORT"
+
+          aws ec2 revoke-security-group-ingress \
+            --group-id "$TASK_SG" \
+            --ip-permissions "IpProtocol=tcp,FromPort=$PORT,ToPort=$PORT,UserIdGroupPairs=[{GroupId=$ALB_SG}]"
 
       - name: Terraform destroy (always)
         if: always()
