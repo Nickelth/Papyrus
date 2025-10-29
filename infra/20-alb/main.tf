@@ -24,7 +24,7 @@ variable "ecs_tasks_sg_id" {
 }
 
 resource "aws_security_group" "alb" {
-  name        = "papyrus-alb-sg"
+  name        = "papyrus-alb-sg-${random_id.suffix.hex}"
   description = "ALB SG"
   vpc_id      = var.vpc_id
 
@@ -45,7 +45,7 @@ resource "aws_security_group" "alb" {
 }
 
 resource "aws_lb" "this" {
-  name                       = "papyrus-alb"
+  name                       = "papyrus-alb-${random_id.suffix.hex}"
   load_balancer_type         = "application"
   security_groups            = [aws_security_group.alb.id]
   subnets                    = var.public_subnet_ids
@@ -54,7 +54,7 @@ resource "aws_lb" "this" {
 }
 
 resource "aws_lb_target_group" "this" {
-  name                 = "papyrus-tg"
+  name                 = "papyrus-tg-${random_id.suffix.hex}"
   port                 = var.container_port
   protocol             = "HTTP"
   vpc_id               = var.vpc_id
@@ -79,4 +79,8 @@ resource "aws_lb_listener" "http" {
     type             = "forward"
     target_group_arn = aws_lb_target_group.this.arn
   }
+}
+
+resource "random_id" "suffix" {
+  byte_length = 2
 }
