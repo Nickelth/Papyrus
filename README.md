@@ -60,6 +60,25 @@ papyrus-invoice/
 docker compose --env-file .env.dev build --no-cache --progress=plain
 ```
 
+### CLoudWatch Alarm IaC監査
+
+リポジトリクローン後、CloudShell上で入力
+
+CLoudWatch Alarm監査体制をIaCで構築
+
+- ECS メモリ >80% (平均2/5分)
+- ALB 5xx% >1 (Sum 2/5分)
+- TargetResponseTime p90 >1.5s
+
+```bash
+cd infra/30-monitor
+terraform init -input=false
+terraform validate
+terraform plan   -var-file=dev.tfvars | tee "$EVID/$(date +%Y%m%d_%H%M%S)_monitor_tf_plan.log"
+terraform apply  -var-file=dev.tfvars -auto-approve \
+  | tee "$EVID/$(date +%Y%m%d_%H%M%S)_monitor_tf_apply.log"
+```
+
 ### 完成定義
 
 - [ ] **ECS→RDS の疎通 OK**（INSERT 0 1 が証跡に残る） 
