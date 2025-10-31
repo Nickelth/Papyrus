@@ -7,7 +7,7 @@ permissions:
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}
   VPC_ID: ${{ secrets.VPC_ID }}
-  PUBLIC_SUBNET_IDS_JSON: ${{ secrets.PUBLIC_SUBNET_IDS }}
+  PRIVATE_SUBNET_IDS_JSON: ${{ secrets.PRIVATE_SUBNET_IDS }}
   ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
   ECS_SERVICE: ${{ vars.ECS_SERVICE }}
   CONTAINER_PORT: ${{ vars.CONTAINER_PORT }}
@@ -86,7 +86,7 @@ jobs:
         run: |
           cat > dev.auto.tfvars <<'TFV'
           vpc_id            = ${{ env.VPC_ID }}
-          public_subnet_ids = ${{ env.PUBLIC_SUBNET_IDS_JSON }}
+          private_subnet_ids = ${{ env.PRIVATE_SUBNET_IDS_JSON }}
           container_port    = 5000
           allow_cidrs       = ["0.0.0.x/0"]
           ecs_tasks_sg_id   = "${{ secrets.ECS_TASK_SG_ID }}"
@@ -253,7 +253,7 @@ jobs:
 
           echo "$ALB_ZONES" | tr '\t' '\n' | grep -qx "$TASK_AZ" || {
             echo "[FATAL] AZ mismatch: ALB not enabled in $TASK_AZ. This causes TargetHealth=unused."
-            echo "[HINT] Add a public subnet for $TASK_AZ to PUBLIC_SUBNET_IDS_JSON (infra/20-alb), or pin ECS service to ALB-enabled AZs."
+            echo "[HINT] Add a private subnet for $TASK_AZ to PRIVATE_SUBNET_IDS_JSON (infra/20-alb), or pin ECS service to ALB-enabled AZs."
             exit 1
           }
 
