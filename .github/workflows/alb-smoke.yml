@@ -226,6 +226,37 @@ jobs:
             echo "[INFO] ingress created"
           fi
 
+      - name: Assert ALB subnets cover task AZ
+        run: |
+          set -euo pipefail
+          ALB_DNS="${{ steps.outs.outputs.alb_dns }}"
+          TG_ARN="${{ steps.outs.outputs.tg_arn }}"
+
+          # ALB ARN -> 有効AZ
+          ALB_ARN=$(aws elbv2 describe-load-balancers \
+            --query "LoadBalancers[?DNSName=='$ALB_DNS'].LoadBalancerArn" --output text)
+          ALB_ZONES=$(aws elbv2 describe-load-balancers --load-balancer-arns "$ALB_ARN" \
+            --query 'LoadBalancers[0].AvailabilityZones[].ZoneName' --output text)
+
+          # タスクのAZ
+          CLUSTER="${{ env.ECS_CLUSTER }}"
+          SERVICE="${{ env.ECS_SERVICE }}"
+          TASK_ARN=$(aws ecs list-tasks --cluster "$CLUSTER" --service-name "$SERVICE" \
+            --desired-status RUNNING --query 'taskArns[0]' --output text)
+          ENI_ID=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" \
+            --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' --output text)
+          TASK_AZ=$(aws ec2 describe-network-interfaces --network-interface-ids "$ENI_ID" \
+            --query 'NetworkInterfaces[0].AvailabilityZone' --output text)
+
+          echo "[INFO] ALB zones: $ALB_ZONES"
+          echo "[INFO] TASK az  : $TASK_AZ"
+
+          echo "$ALB_ZONES" | tr '\t' '\n' | grep -qx "$TASK_AZ" || {
+            echo "[FATAL] AZ mismatch: ALB not enabled in $TASK_AZ. This causes TargetHealth=unused."
+            echo "[HINT] Add a public subnet for $TASK_AZ to PUBLIC_SUBNET_IDS_JSON (infra/20-alb), or pin ECS service to ALB-enabled AZs."
+            exit 1
+          }
+
       - name: Register target
         run: |
           set -euo pipefail
