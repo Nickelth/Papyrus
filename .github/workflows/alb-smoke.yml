@@ -150,46 +150,12 @@ jobs:
           path: |
             infra/20-alb/terraform.tfstate
 
-      - name: Resolve ECS task IP
-        run: |
-          set -euo pipefail
-
-          TASK_ARN=$(aws ecs list-tasks \
-            --cluster "${{ env.ECS_CLUSTER }}" \
-            --service-name "${{ env.ECS_SERVICE }}" \
-            --desired-status RUNNING \
-            --query 'taskArns[0]' \
-            --output text)
-
-          echo "TASK_ARN=$TASK_ARN"
-
-          ENI_ID=$(aws ecs describe-tasks \
-            --cluster "${{ env.ECS_CLUSTER }}" \
-            --tasks "$TASK_ARN" \
-            --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' \
-            --output text)
-
-          echo "ENI_ID=$ENI_ID"
-
-          TASK_IP=$(aws ec2 describe-network-interfaces \
-            --network-interface-ids "$ENI_ID" \
-            --query 'NetworkInterfaces[0].PrivateIpAddress' \
-            --output text)
-
-          echo "TASK_IP=$TASK_IP"
-
-          {
-            echo "task_arn=$TASK_ARN"
-            echo "eni_id=$ENI_ID"
-            echo "task_ip=$TASK_IP"
-          } >> $GITHUB_OUTPUT
-
       - name: ECS task inspect (get IP and SG)
         id: ecsinfo
         run: |
           set -euo pipefail
-          CLUSTER="papyrus-ecs-prd"
-          SERVICE="papyrus-task-service"
+          CLUSTER="${{ env.ECS_CLUSTER }}"
+          SERVICE="${{ env.ECS_SERVICE }}"
           REGION="${{ env.AWS_REGION }}"
 
           TASK_ARN=$(aws ecs list-tasks \
@@ -201,9 +167,10 @@ jobs:
             --output text)
 
           if [ -z "$TASK_ARN" ] || [ "$TASK_ARN" = "None" ]; then
-            echo "[FATAL] no RUNNING task found" >&2
+            echo "[FATAL] no RUNNING task found in cluster=$CLUSTER service=$SERVICE" >&2
             exit 1
           fi
+          echo "TASK_ARN=$TASK_ARN"
 
           ENI_ID=$(aws ecs describe-tasks \
             --cluster "$CLUSTER" \
@@ -271,6 +238,21 @@ jobs:
           aws elbv2 register-targets \
             --target-group-arn "$TG_ARN" \
             --targets "Id=$TASK_IP,Port=$PORT"
+
+      - name: Verify target is registered
+        run: |
+          set -euo pipefail
+          TG_ARN="${{ steps.outs.outputs.tg_arn }}"
+          aws elbv2 register-targets \
+            --target-group-arn "$TG_ARN" \
+            --targets "Id=${{ steps.ecsinfo.outputs.task_ip }},Port=${{ env.CONTAINER_PORT }}"
+          # 登録済みターゲット一覧を確認
+          aws elbv2 describe-target-health --target-group-arn "$TG_ARN" \
+            --query 'TargetHealthDescriptions[].{ip:Target.Id,port:Target.Port,state:TargetHealth.State}' \
+            --output table
+          COUNT=$(aws elbv2 describe-target-health --target-group-arn "$TG_ARN" \
+            --query 'length(TargetHealthDescriptions[])' --output text)
+          [ "$COUNT" -ge 1 ] || { echo "[FATAL] No targets in TG after registration"; exit 1; }
 
       - name: Ensure listener forwards to our TG
         run: |
@@ -367,30 +349,26 @@ jobs:
         run: |
           set -euo pipefail
           TG_ARN="${{ steps.outs.outputs.tg_arn }}"
-          PORT="${{ env.CONTAINER_PORT }}"
-          TASK_IP="${{ steps.ecsinfo.outputs.task_ip }}"
           deadline=$((SECONDS+120))
           while :; do
-            state=$(aws elbv2 describe-target-health \
-              --target-group-arn "$TG_ARN" \
-              --targets "Id=$TASK_IP,Port=$PORT" \
+            STATE=$(aws elbv2 describe-target-health --target-group-arn "$TG_ARN" \
               --query 'TargetHealthDescriptions[0].TargetHealth.State' \
               --output text 2>/dev/null || true)
-            echo "[INFO] target state = $state"
-            [ "$state" = "healthy" ] && break
+            echo "[INFO] target state = ${STATE:-<none>}"
+            [ "$STATE" = "healthy" ] && break
             [ $SECONDS -gt $deadline ] && { echo "[FATAL] Target not healthy in time"; exit 1; }
             sleep 2
           done
           echo "[INFO] healthy OK"
 
-      - name: Dump LB wiring on failure
+      - name: Dump TG health and listeners on failure
         if: failure()
         run: |
           mkdir -p evidence
-          aws elbv2 describe-listeners --load-balancer-arn "${{ steps.albinfo.outputs.alb_arn }}" \
-            > evidence/$(date +%Y%m%d_%H%M%S)_listeners.json || true
           aws elbv2 describe-target-health --target-group-arn "${{ steps.outs.outputs.tg_arn }}" \
             > evidence/$(date +%Y%m%d_%H%M%S)_tg_health.json || true
+          aws elbv2 describe-listeners --load-balancer-arn "${{ steps.albinfo.outputs.alb_arn }}" \
+            > evidence/$(date +%Y%m%d_%H%M%S)_listeners.json || true
 
       - name: Smoke hit /healthz and /dbcheck
         run: |
