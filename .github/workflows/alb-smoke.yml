@@ -277,30 +277,57 @@ jobs:
           set -euo pipefail
           ALB_ARN="${{ steps.albinfo.outputs.alb_arn }}"
           TG_ARN="${{ steps.outs.outputs.tg_arn }}"
-          LSN="${{ steps.albinfo.outputs.listener_arn }}"
+
+          # 1) まず既存のHTTP:80リスナーを探す（あれば使う）
+          LSN=$(aws elbv2 describe-listeners \
+            --load-balancer-arn "$ALB_ARN" \
+            --query "Listeners[?Protocol=='HTTP' && Port==\`80\`][0].ListenerArn" \
+            --output text 2>/dev/null || true)
+          [ "$LSN" = "None" ] && LSN=""
 
           if [ -z "$LSN" ]; then
-            echo "[INFO] No HTTP:80 listener. Creating one."
-            LSN=$(aws elbv2 create-listener \
+            echo "[INFO] No HTTP:80 listener. Trying to create."
+            set +e
+            CREATE_OUT=$(aws elbv2 create-listener \
               --load-balancer-arn "$ALB_ARN" \
               --protocol HTTP --port 80 \
-              --default-actions "Type=forward,TargetGroupArn=$TG_ARN" \
-              --query 'Listeners[0].ListenerArn' --output text)
-            echo "[INFO] Created LISTENER_ARN=$LSN"
-          else
-            # 既存リスナーが別TGを向いていたら張り替える
-            CUR=$(aws elbv2 describe-listeners --listener-arn "$LSN" \
-              --query 'Listeners[0].DefaultActions[0].ForwardConfig.TargetGroups[0].TargetGroupArn' \
-              --output text 2>/dev/null || true)
-            if [ "$CUR" != "$TG_ARN" ]; then
-              echo "[INFO] Listener points to different TG. Modifying to $TG_ARN"
-              aws elbv2 modify-listener \
-                --listener-arn "$LSN" \
-                --default-actions "Type=forward,TargetGroupArn=$TG_ARN" \
-                >/dev/null
+              --default-actions "Type=forward,TargetGroupArn=$TG_ARN" 2>&1)
+            RC=$?
+            set -e
+            if [ $RC -eq 0 ]; then
+              LSN=$(echo "$CREATE_OUT" | jq -r '.Listeners[0].ListenerArn' 2>/dev/null || true)
+              echo "[INFO] Created listener: $LSN"
             else
-              echo "[INFO] Listener already forwards to our TG"
+              echo "$CREATE_OUT" | grep -q "DuplicateListener"
+              if [ $? -eq 0 ]; then
+                echo "[WARN] DuplicateListener: fetching existing listener on :80"
+                # 競合した＝既にある。取り直して使う。
+                LSN=$(aws elbv2 describe-listeners \
+                  --load-balancer-arn "$ALB_ARN" \
+                  --query "Listeners[?Protocol=='HTTP' && Port==\`80\`][0].ListenerArn" \
+                  --output text)
+                [ "$LSN" = "None" ] && { echo "[FATAL] failed to resolve existing listener after DuplicateListener"; exit 1; }
+              else
+                echo "$CREATE_OUT" >&2
+                exit $RC
+              fi
             fi
+          else
+            echo "[INFO] Found existing HTTP:80 listener: $LSN"
+          fi
+
+          # 2) 既存/新規どちらでも、デフォルトアクションが我々のTGを向くように修正
+          CUR_TG=$(aws elbv2 describe-listeners --listener-arn "$LSN" \
+            --query 'Listeners[0].DefaultActions[0].ForwardConfig.TargetGroups[0].TargetGroupArn' \
+            --output text 2>/dev/null || true)
+
+          if [ "$CUR_TG" != "$TG_ARN" ]; then
+            echo "[INFO] Modifying listener to forward to TG=$TG_ARN"
+            aws elbv2 modify-listener \
+              --listener-arn "$LSN" \
+              --default-actions "Type=forward,TargetGroupArn=$TG_ARN" >/dev/null
+          else
+            echo "[INFO] Listener already forwards to our TG"
           fi
 
           # 参考出力（証跡）
