@@ -68,6 +68,9 @@ resource "aws_lb_target_group" "this" {
     timeout             = 5
     path                = "/healthz"
     matcher             = "200-399"
+    enabled             = true
+    port                = "traffic-port"
+    protocol            = "HTTP"
   }
 }
 
