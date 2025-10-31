@@ -278,7 +278,6 @@ jobs:
           ALB_ARN="${{ steps.albinfo.outputs.alb_arn }}"
           TG_ARN="${{ steps.outs.outputs.tg_arn }}"
 
-          # 安全な取得関数（None/空を正しくハンドリング）
           get_listener_arn() {
             aws elbv2 describe-listeners \
               --load-balancer-arn "$ALB_ARN" \
@@ -297,7 +296,6 @@ jobs:
               --default-actions "Type=forward,TargetGroupArn=$TG_ARN" 2>&1)
             RC=$?
             set -e
-
             if [ $RC -ne 0 ]; then
               echo "$CREATE_OUT" | grep -q "DuplicateListener"
               if [ $? -eq 0 ]; then
@@ -309,26 +307,32 @@ jobs:
                 exit $RC
               fi
             else
-              # create-listener成功時は出力からARNを抜く
+              # create-listener の JSON から ARN を抜く
               LSN=$(printf '%s' "$CREATE_OUT" | jq -r '.Listeners[0].ListenerArn' 2>/dev/null || true)
             fi
           fi
 
           if [ -z "${LSN:-}" ]; then
             echo "[FATAL] Failed to resolve HTTP:80 listener ARN"
-            echo "[HINT] Listeners dump follows:"
             aws elbv2 describe-listeners --load-balancer-arn "$ALB_ARN" || true
             exit 1
           fi
 
           echo "[INFO] Using LISTENER_ARN=$LSN"
 
-          # 既存リスナーが既に我々のTGを向いているか確認（TargetGroupArn / ForwardConfig 両対応）
+          # 既定アクションの TG を取得（両形対応: TargetGroupArn or ForwardConfig.TargetGroups[0].TargetGroupArn）
           CUR_TG=$(aws elbv2 describe-listeners --listener-arn "$LSN" \
-            --query "coalesce(Listeners[0].DefaultActions[0].TargetGroupArn, Listeners[0].DefaultActions[0].ForwardConfig.TargetGroups[0].TargetGroupArn)" \
-            --output text 2>/dev/null | sed 's/^None$//')
+                     --query 'Listeners[0].DefaultActions[0].TargetGroupArn' \
+                     --output text 2>/dev/null || true)
+          if [ -z "$CUR_TG" ] || [ "$CUR_TG" = "None" ]; then
+            CUR_TG=$(aws elbv2 describe-listeners --listener-arn "$LSN" \
+                        --query 'Listeners[0].DefaultActions[0].ForwardConfig.TargetGroups[0].TargetGroupArn' \
+                        --output text 2>/dev/null || true)
+            [ "$CUR_TG" = "None" ] && CUR_TG=""
+          fi
+          echo "[INFO] Current listener TG=${CUR_TG:-<none>}"
 
-          if [ "$CUR_TG" != "$TG_ARN" ]; then
+          if [ "$CUR_TG" != "$TG_ARN" ] && [ -n "$TG_ARN" ]; then
             echo "[INFO] Modifying listener to forward to TG=$TG_ARN"
             aws elbv2 modify-listener \
               --listener-arn "$LSN" \
@@ -338,9 +342,10 @@ jobs:
             echo "[INFO] Listener already forwards to our TG"
           fi
 
-          # 参考: 最終状態を証跡に出力
+          # 証跡
           aws elbv2 describe-listeners --listener-arn "$LSN" \
-            --query 'Listeners[0].{Port:Port,Action:DefaultActions[0].Type,TG:coalesce(DefaultActions[0].TargetGroupArn, DefaultActions[0].ForwardConfig.TargetGroups[0].TargetGroupArn)}'
+            --query 'Listeners[0].{Port:Port,Action:DefaultActions[0].Type}' \
+            --output json
 
       - name: Ensure TG health check uses /healthz
         run: |
