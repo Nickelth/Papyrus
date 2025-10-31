@@ -20,7 +20,7 @@ Dependencies (add to requirements.txt):
 Environment contract:
     APP_ENV=development|staging|prduction  # selects default backend
     CONFIG_BACKEND=env|aws                  # explicit override (optional)
-    AWS_REGION=ap-northeast-1               # or your region
+    AWS_REGION=us-west-2             # or your region
     # Secrets Manager IDs (prd)
     DB_SECRET_ID=papyrus/prd/db
     AUTH0_SECRET_ID=papyrus/prd/auth0
@@ -53,6 +53,8 @@ except Exception:  # pragma: no cover - lib optional
 
 import boto3
 from botocore.config import Config as BotoConfig
+
+import json, logging, sys, time
 
 # -----------------------------
 # Models
@@ -261,3 +263,13 @@ class DBPool:
 
 def init_db_pool(app_config: AppConfig) -> DBPool:
     return DBPool(app_config.db)
+
+class JsonFormatter(logging.Formatter):
+    def format(self, r):
+        base={"ts":time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime(r.created)),
+              "lvl":r.levelname,"msg":r.getMessage()}
+        if "route" in r.__dict__: base["route"]=r.__dict__["route"]
+        return json.dumps(base, ensure_ascii=False)
+def setup_json_logging():
+    h=logging.StreamHandler(sys.stdout); h.setFormatter(JsonFormatter())
+    root=logging.getLogger(); root.handlers.clear(); root.addHandler(h); root.setLevel(logging.INFO)

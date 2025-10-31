@@ -249,14 +249,41 @@ jobs:
             --target-group-arn "$TG_ARN" \
             --targets "Id=$TASK_IP,Port=$PORT"
 
-          echo "[INFO] polling target health (non-fatal)"
-          for i in $(seq 1 20); do
-            aws elbv2 describe-target-health \
+      - name: Ensure TG health check uses /healthz
+        run: |
+          set -euo pipefail
+          TG_ARN="${{ steps.outs.outputs.tg_arn }}"
+          aws elbv2 modify-target-group \
+            --target-group-arn "$TG_ARN" \
+            --health-check-path "/healthz" \
+            --health-check-protocol "HTTP" \
+            --health-check-port "traffic-port" \
+            --health-check-interval-seconds 10 \
+            --health-check-timeout-seconds 5 \
+            --healthy-threshold-count 2 \
+            --unhealthy-threshold-count 2 \
+            --matcher HttpCode=200-399
+          echo "[INFO] set health check path to /healthz (200-399)"
+
+      - name: Wait target healthy (custom loop)
+        run: |
+          set -euo pipefail
+          TG_ARN="${{ steps.outs.outputs.tg_arn }}"
+          PORT="${{ env.CONTAINER_PORT }}"
+          TASK_IP="${{ steps.ecsinfo.outputs.task_ip }}"
+          deadline=$((SECONDS+120))
+          while :; do
+            state=$(aws elbv2 describe-target-health \
               --target-group-arn "$TG_ARN" \
               --targets "Id=$TASK_IP,Port=$PORT" \
-              || true
-            sleep 3
+              --query 'TargetHealthDescriptions[0].TargetHealth.State' \
+              --output text 2>/dev/null || true)
+            echo "[INFO] target state = $state"
+            [ "$state" = "healthy" ] && break
+            [ $SECONDS -gt $deadline ] && { echo "[FATAL] Target not healthy in time"; exit 1; }
+            sleep 2
           done
+          echo "[INFO] healthy OK"
 
       - name: Smoke hit /healthz and /dbcheck
         run: |
@@ -266,10 +293,17 @@ jobs:
           TS=$(date +%Y%m%d_%H%M%S)
 
           curl -si "http://$DNS/healthz" \
-            | tee "evidence/${TS}_healthz.log" || true
+            | tee "evidence/${TS}_healthz.log"
 
           curl -si "http://$DNS/dbcheck" \
-            | tee "evidence/${TS}_dbcheck.log" || true
+            | tee "evidence/${TS}_dbcheck.log"
+
+      - name: Dump target health on failure
+        if: failure()
+        run: |
+          mkdir -p evidence
+          aws elbv2 describe-target-health --target-group-arn "${{ steps.outs.outputs.tg_arn }}" \
+            > "evidence/$(date +%Y%m%d_%H%M%S)_tg_health_on_fail.json" || true
 
       - name: Upload smoke evidence
         if: always()

@@ -2,167 +2,127 @@
 
 ### 目的
 
-Papyrus インフラの検証フローを「説明ではなく証跡で示せる」状態に近づける。  
-具体的には以下を実施した:
-- アプリケーションの健全性と RDS への書き込み可否を、ALB 経由で自動検証できるようにする
-- その検証手順を CI / Terraform に固定し、再現性と監査性を持たせる
-- TLS (PostgreSQL への SSL 接続必須) を運用ルールとして強制する設計にする
-- 監視を IaC 管理下に置き、リリース後の稼働状態の可観測性を確保する
+Papyrus インフラの検証フローを、「説明ではなく証跡で示す」運用へ引き上げる。具体的には次を実施した。
 
-これにより、Papyrus の稼働可否・DB 書き込み可否・TLS 運用・監視・リソース破棄 (コスト制御) を、すべて自動テストおよび証跡ログで説明できるようになる。
+- アプリ健全性と RDS への書き込み可否を、ALB 経由で自動検証できる状態にする
+- 検証手順を CI / Terraform に固定し、再現性・監査性を担保する
+- PostgreSQL 接続は TLS 必須（PGSSLMODE=require）を構成として恒久化する
+- 監視を IaC 管理下に移し、稼働後の可観測性を確保する
+- 一時 ALB を CI で「作る→疎通→壊す」まで完全自動化し、コストリークを防止する
+
+これにより、稼働可否・DB 書き込み可否・TLS 強制・監視・リソース破棄を、毎回の自動テストと証跡ログで説明できる。
 
 ### 変更内容
 
 #### 1. `/healthz` の実装と疎通確認の自動化
-- `papyrus/blueprints/healthz.py` を追加し、`/healthz` を実装。
-  - DB 非依存で `{"ok": true}` を返す軽量ヘルスチェックエンドポイント。
-- Flask 初期化処理 (`create_app`) に `healthz_bp` を登録済み。
-- ALB/Target Group のヘルスチェックパスを `/healthz` に統一する前提を満たした。
+
+- `papyrus/blueprints/healthz.py` を追加し、DB 非依存で `{"ok": true}` を返す軽量ヘルスを実装。
+- Flask 初期化時に `healthz_bp` を登録。ALB/Target Group のヘルスチェックパスを `/healthz` に統一可能な前提を整備。
 
 #### 2. `/dbcheck` の ALB 経由動作検証
-- `papyrus/blueprints/dbcheck.py` を Blueprint として登録し直し、`/dbcheck` を Flask の URL マップに確実に載る形にした。
-- Fargate コンテナ上で `/dbcheck` が HTTP 200 を返しつつ、RDS に対して  
-  `INSERT ... ON CONFLICT DO NOTHING` により SKU `SKU-APP` を書き込めることを確認。
-- smoke CI の `curl` により、ALB 経由の `/dbcheck` 呼び出しで `HTTP/1.1 200 OK ... {"inserted":true}` を取得済み。
 
-#### 3. ALB smoke パイプラインの確立
-- GitHub Actions `alb-smoke` ワークフローを整備。
-  - Terraform により ALB / Target Group / Listener / Security Group を一時的に作成。
-  - 稼働中の ECS サービス (desiredCount=1) からタスクのプライベート IP を取得し、Target Group に `register-targets`。
-  - `aws elbv2 wait target-in-service` により、ターゲットが healthy になるまで待機。
-  - 取得した ALB の DNS 名に対して `/healthz` および `/dbcheck` をリクエストし、HTTP ステータスとレスポンス本文をログとして保存。
-  - 処理完了後に `terraform destroy` を実行し、ALB/TG/Listener/SG をすべて削除してコストリークを防止。
-- 結果として以下を確認済み:
-  - `/healthz` → `HTTP/1.1 200 OK ... {"ok":true}`
-  - `/dbcheck` → `HTTP/1.1 200 OK ... {"inserted":true}`
-- これにより、「ALB 経由で Fargate サービスに到達し、そのアプリケーションが RDS に書き込み可能である」ことを自動で検証・証跡化できるようになった。
+- `papyrus/blueprints/dbcheck.py` を Blueprint として正式登録。URL マップに確実に載る形へ整理。
+- Fargate 上で `/dbcheck` が HTTP 200 を返し、RDS へ `INSERT ... ON CONFLICT DO NOTHING` により `SKU-APP` を投入できることを確認。
+- CI の smoke で ALB 経由アクセスを `curl` し、`HTTP/1.1 200 OK ... {"inserted":true}` を取得・保存。
+
+#### 3. ALB smoke パイプラインの確立（CI 一時本番）
+
+- GitHub Actions `alb-smoke` を整備。Terraform で一時的に ALB / Target Group / Listener / ALB 用 SG を作成し、ECS タスクのプライベート IP:5000 をターゲット登録。
+- `aws elbv2 wait target-in-service` によるヘルス化待機後、ALB の DNS に対して `/healthz` と `/dbcheck` を実行し、HTTP ステータスと JSON 本文を証跡化。
+- 実行後は `terraform destroy` で ALB/TG/Listener/SG を必ず削除。ALB 名や TG 名はサフィックス付与運用に寄せ、過去残骸との競合を低減。
+- セキュリティグループの一時 Ingress（ALB → ECS タスク:5000/tcp）は自動付与・撤収の流れを組み込み中（詳細は「残課題」）。
 
 #### 4. `PGSSLMODE=require` の恒久適用
-- ECS タスク定義を jq で再生成する処理を拡張し、`containerDefinitions[].environment` に
-  `{"name":"PGSSLMODE","value":"require"}` を強制的に挿入するようにした。
-- 新タスク定義は `register-task-definition` → `update-service --force-new-deployment --enable-execute-command` により反映。
-- 反映後のタスクに対し `ecs execute-command` で環境変数を確認し、`PGSSLMODE=require` が常設されていることを証跡取得済み。
-- これにより、PostgreSQL への平文接続を禁止し、すべてのアプリケーション接続を TLS 必須とした。
+
+- ECS タスク定義の再生成ロジックに `{"name":"PGSSLMODE","value":"require"}` を自動付与。
+  反映は `register-task-definition` → `update-service --force-new-deployment --enable-execute-command`。
+- 反映後、`ecs execute-command` で環境変数を確認し、TLS 必須が常設されている証跡を取得。
 
 #### 5. DB 書き込み経路の二重化検証
-- 既存の CLI 経路 (ECS Exec + `psycopg2`) により、SKU `SKU-CLI` を RDS に INSERT 済み。
-- `/dbcheck` 経由のアプリケーション側から、SKU `SKU-APP` を INSERT 済み。
-- ECS Exec により以下のクエリを実行し、両方のデータが RDS 上に存在することを確認済み:
+
+- ECS Exec + `psycopg2` の CLI 経路で `SKU-CLI` を RDS へ INSERT。
+- アプリ経由 `/dbcheck` で `SKU-APP` を RDS へ INSERT。
+- 両データの存在を以下のクエリで確認。
+
   ```sql
   SELECT sku,name,unit_price
   FROM papyrus_schema.products
   WHERE sku IN ('SKU-CLI','SKU-APP');
   ```
-  - 実測結果:  
-    `ROWS: [('SKU-CLI', 'health', 0), ('SKU-APP', 'health', 0)]`
-- これにより
-  - 「コンテナから RDS へ TLS 必須で直接書き込める」
-  - 「ALB 経由のアプリケーション呼び出しでも最終的に RDS へ書き込める」
-  の両ラインを実証した。
 
-#### 6. プリフライト (CI 前段チェック) の導入
-- `alb-smoke` ワークフローの先頭にプリフライトを追加し、デプロイ前の健全性を強制。
-  1. Flask アプリを import し、`create_app()` を実行。  
-     ルーティング一覧をダンプし、`/healthz` と `/dbcheck` が存在しない場合は CI を失敗させる。  
-     - CI ログに `ROUTES: [...]` を出力して証跡化。
-  2. RDS 接続メタ情報のドリフト検知。  
-     Secrets Manager (`papyrus/prd/db`) から取得した `host` / `port` と、`aws rds describe-db-instances` で取得した実体のエンドポイント/ポートを比較し、差異があれば `exit 1`。
-- これにより、誤ったエンドポイント情報や誤配置された Blueprint などを、本番系に進む前に検出できるようになった。
+  実測: `ROWS: [('SKU-CLI','health',0), ('SKU-APP','health',0)]`
 
-#### 7. 監視 IaC (`infra/30-monitor`) の導入
-- `infra/30-monitor` ディレクトリを作成し、監視リソースを Terraform 管理下に移行。
-- CloudWatch Alarm を 3 種類追加し、SNS 通知先を関連付けた:
-  - ECS メモリ使用率 > 80% (平均、2/5分評価)  
-    - 対象: `ClusterName="papyrus-ecs-prd"` / `ServiceName="papyrus-task-service"`
-  - ALB の 5xx レスポンス > 1 (合計、2/5分評価)
-  - TargetResponseTime p90 > 1.5s (2/5分評価)  
-    - 対象: 対象の Target Group / Load Balancer
-- これを `terraform apply` してアラームと SNS 通知を一括作成済み。
-- アプリケーション稼働後の異常 (高メモリ使用率、エラーレスポンス増加、レスポンスタイム悪化など) を継続監視できる状態になった。
+#### 6. プリフライト（CI 前段チェック）導入
 
-#### 8. README ドキュメントの整理
-- `infra/10-rds/README.md` の整備方針:
-  - 必須変数 (`db_username`, `db_password`, `ecs_tasks_sg_id`, `private_subnet_ids` など) の明示
-  - Parameter Group (`rds.force_ssl=1`) の意図と、反映のための RDS 再起動タイムスタンプ管理
-  - スキーマ投入フローの二段化:
-    - DRY RUN (BEGIN/ROLLBACK) 手順
-    - 本適用および INSERT 検証手順
-  - 証跡ファイル一覧の明文化  
-    - `*_papyrus_tf_plan.txt` / `*_papyrus_tf_apply.txt`  
-    - `*_papyrus_rds_endpoint.txt`  
-    - `*_schema_dryrun_exec.log`  
-    - `*_papyrus_psql_insert_cli.log`  
-    - `*_papyrus_psql_insert_app.log`  
-    - `*_papyrus_sku_check.log`
-- `infra/20-alb/README.md` の整備方針:
-  - `dev.auto.tfvars` は CI が毎回生成・破棄する一時ファイルであり Git 管理しないこと
-  - ALB/TG/Listener/SG の作成 → ターゲット登録 → `/healthz` `/dbcheck` の検証 → `terraform destroy` による削除、というライフサイクルを明示
-  - ALB は稼働中は常時課金されるため、destroy が必須である旨の注意喚起
-  - `evidence/*_healthz.log` および `evidence/*_dbcheck.log` を CI アーティファクトとして保存する運用を明記
+- `from papyrus import create_app` → ルーティング一覧ダンプで `/healthz` `/dbcheck` の欠落を検出した場合は即 Fail。
+- RDS 接続メタ情報のドリフト検知を追加。Secrets Manager (`papyrus/prd/db`) の `host`/`port` と、`describe-db-instances` の実体を比較し不一致なら Fail。
+- Secrets/SSM 依存で import が失敗するケースは、ランナー側に最低限のダミー環境変数を噛ませる運用（暫定）で回避。
+
+#### 7. 監視 IaC（`infra/30-monitor`）の導入
+
+- `infra/30-monitor/` 配下で CloudWatch Alarm を Terraform 管理化。
+  監視メトリクス:
+
+  - ECS メモリ使用率 > 80%（平均、2/5 分）
+  - ALB の 5xx レスポンス > 1（合計、2/5 分）
+  - TargetResponseTime p90 > 1.5s（2/5 分）
+- Alarm は destroy 対象ではなく常設。SNS 通知先を関連付け、`terraform apply` 済み。
+
+#### 8. ドキュメント整備方針（README）
+
+- `infra/10-rds/README.md`: 必須変数、ParamGroup（`rds.force_ssl=1`）と再起動タイムスタンプ管理、DRY RUN→本適用、証跡ファイル一覧を明文化。
+- `infra/20-alb/README.md`: 「一時 ALB を作成→疎通→必ず destroy。ALB 放置はコスト燃焼」を運用ルールとして明記。CI アーティファクトの保存方針も明記。
+- `infra/30-monitor/README.md`: 監視閾値と SNS 設計意図、IaC 管理方針を記述。
 
 ### 証跡一覧
 
-今回新規に取得した、または強化した証跡は以下のとおり。
+- `*_healthz.log`
 
-- `*_healthz.log`  
-  - `HTTP/1.1 200 OK ... {"ok":true}` が ALB 経由で取得できていることを確認
-- `*_dbcheck.log`  
-  - `HTTP/1.1 200 OK ... {"inserted":true}` が ALB 経由で取得できていることを確認  
-  - Papyrus アプリケーション経由で RDS に対し INSERT が成功していることの証明になる
-- `*_papyrus_sku_check.log`  
-  - `ROWS: [('SKU-CLI', 'health', 0), ('SKU-APP', 'health', 0)]`  
-  - CLI 経由 (`SKU-CLI`) とアプリ経由 (`SKU-APP`) の両経路で投入したデータが RDS 上に存在することを確認
-- `*_pgsslmode_env.log`  
-  - ECS Exec の環境変数ダンプにより、`PGSSLMODE=require` がタスク定義レベルで常設されていることを確認
-- `infra/30-monitor` の `terraform apply` 実行ログ  
-  - `Apply complete! Resources: 4 added, 0 changed, 0 destroyed.`  
-  - 監視 (CloudWatch Alarm / SNS) が Terraform で作成済みであることの証跡
-- `alb-smoke` ワークフローログ  
-  - プリフライトの `ROUTES: [...]` 出力
-  - Secrets Manager と RDS のエンドポイント・ポートの差分チェック結果
-  - `register-targets` 後に `wait target-in-service` が成功した記録
-  - `terraform destroy` による ALB/TG/Listener/SG の削除完了ログ
+  - ALB 経由で `HTTP/1.1 200 OK ... {"ok":true}` を取得。
+- `*_dbcheck.log`
 
-証跡は `docs/evidence/` に保存すると同時に、CI のアーティファクトとしても収集している。  
-これにより、外部レビューや面談等で「本当に動いているのか」を問い合わせられた場合に、ログ一式を提示して説明できるようになった。
+  - ALB 経由で `HTTP/1.1 200 OK ... {"inserted":true}` を取得。アプリ経由の RDS への INSERT 成功を証明。
+- `*_papyrus_sku_check.log`
+
+  - `ROWS: [('SKU-CLI','health',0), ('SKU-APP','health',0)]` を確認。
+- `*_pgsslmode_env.log`
+
+  - ECS Exec による環境変数ダンプで `PGSSLMODE=require` を恒久適用済みであることを確認。
+- `infra/30-monitor` の `terraform apply` ログ
+
+  - `Apply complete! Resources: 4 added, 0 changed, 0 destroyed.` を保持。
+- `alb-smoke` ワークフローの実行ログ
+
+  - プリフライト `ROUTES: [...]`、Secrets vs RDS ドリフトチェック結果、`register-targets`→`wait target-in-service` 成功、`terraform destroy` の完了記録。
+
+証跡は `docs/evidence/` に保存し、同時に CI アーティファクトとして収集済み。
 
 ### ロールアウト
 
-Papyrus のリリースパスは今後、以下の手順を標準とする。
+標準リリースパスは次の通り。
 
-1. 新しいコンテナイメージを ECR に push する  
-2. jq を用いてタスク定義を再生成し、`PGSSLMODE=require` を常設した状態にする  
-3. `register-task-definition` → `update-service --force-new-deployment --enable-execute-command` でサービスを更新  
-4. RDS が稼働済み、かつ ECS の `desiredCount=1` を満たした状態で `alb-smoke` を起動  
-5. CI が一時的に ALB/TG/Listener/SG を Terraform で作成  
-6. その ALB 経由で `/healthz` および `/dbcheck` を呼び出し、HTTP 200 と期待レスポンス本文を取得 (`{"ok":true}`, `{"inserted":true}`)  
-   - `/dbcheck` の応答により、アプリ経由で RDS への INSERT が成立していることを証明  
-7. `terraform destroy` により ALB/TG/Listener/SG を完全削除し、不要リソースを残さない  
-8. 監視については、`infra/30-monitor` を `terraform apply` 済みであれば CloudWatch Alarm / SNS 通知が有効な状態になる
+1. 新コンテナイメージを ECR に push
+2. jq でタスク定義を再生成し、`PGSSLMODE=require` を強制付与
+3. `register-task-definition` → `update-service --force-new-deployment --enable-execute-command`
+4. RDS 稼働・ECS desiredCount=1 を満たした状態で `alb-smoke` を起動（`workflow_dispatch` で手動実行可）
+5. Terraform で一時 ALB/TG/Listener/ALB-SG を作成し、ECS タスクをターゲット登録
+6. ALB 経由で `/healthz` と `/dbcheck` を実行し、`{"ok":true}` / `{"inserted":true}` を証跡化
+7. `terraform destroy` で ALB/TG/Listener/SG を完全撤収
+8. 監視は `infra/30-monitor` を `apply` 済みで常時有効
 
-このフローを通過したコンテナイメージは、
-- 正常応答すること
-- RDS に対して TLS 必須で書き込み可能であること
-- モニタリング対象になっていること
-- コストリークを残さないこと  
-を満たしている。
+このフローを通過したイメージは、正常応答・TLS 必須での RDS 書き込み可・監視下・コストリークなし、を満たす。
 
-### 残課題 (Open Items)
+### 残課題
 
-- README の最終反映  
-  - `infra/10-rds/README.md` および `infra/20-alb/README.md` について、変数定義・手順・証跡ファイル名・コスト注意点をリポジトリに正式コミットする
+- [ ] CloudWatchにJSON 1行ログが出ている証跡ファイルがdocs/evidence/にある
 
-- タスク定義更新フローのスクリプト化  
-  - jq → `register-task-definition` → `update-service` の一連手順をスクリプト化し、手動操作による入力ミスを防止する
+- [ ] *_cli.castとCloudTrail/Configの24hエクスポートがdocs/evidence/にある
 
-- TLS 検証の強化  
-  - 現状は `PGSSLMODE=require` により「平文接続は禁止」までを強制している  
-  - 追加強化として、RDS 提供の CA バンドルをコンテナに同梱し、  
-    `sslrootcert=/etc/ssl/certs/rds-combined-ca-bundle.pem` のような証明書検証までカバーする案は設計済みだが未導入
+- [ ] infra/10-rds 20-alb 30-monitorのREADMEが更新済みで、コマンドと証跡の置き場が明記されている
 
-- コスト管理の README 明文化  
-  - ALB は稼働中に課金が発生するため、`terraform destroy` が失敗した場合のリカバリ手順  
-    (手動での `terraform destroy` 実行、セキュリティグループ残骸がある場合は手動削除など) を README に記載する
+- [ ] alb-smokeでSG二重回避と自前waitが効いており、一発成功のログがある
+
+- [ ] ルートREADMEに“観測”“CLI証跡”の短い説明が追記され、総行数300未満
 
 ---
 
