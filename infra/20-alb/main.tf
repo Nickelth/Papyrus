@@ -9,7 +9,7 @@ terraform {
 }
 
 variable "vpc_id" { type = string }
-variable "public_subnet_ids" { type = list(string) }
+variable "private_subnet_ids" { type = list(string) }
 variable "container_port" { 
   type = number
   default = 5000 
@@ -48,7 +48,7 @@ resource "aws_lb" "this" {
   name                       = "papyrus-alb-${random_id.suffix.hex}"
   load_balancer_type         = "application"
   security_groups            = [aws_security_group.alb.id]
-  subnets                    = var.public_subnet_ids
+  subnets                    = var.private_subnet_ids
   idle_timeout               = 30
   enable_deletion_protection = false
 }
