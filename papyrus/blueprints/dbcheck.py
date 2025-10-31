@@ -10,6 +10,6 @@ def dbcheck():
         cur.execute("INSERT INTO papyrus_schema.products (sku,name,unit_price,note) VALUES ('SKU-APP','health',0,'probe') ON CONFLICT (sku) DO NOTHING;")
         conn.commit()
         log.info("dbcheck ok", extra={"route":"/dbcheck"})
-        return jsonify({"inserted": True}), 200
+        return jsonify({"inserted": True},{"ok": True}), 200
     finally:
         pool.putconn(conn)
