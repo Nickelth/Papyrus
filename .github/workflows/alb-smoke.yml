@@ -120,6 +120,29 @@ jobs:
           echo "alb_sg_id=$ALB_SG"   >> $GITHUB_OUTPUT
           echo "task_sg_id=$TASK_SG" >> $GITHUB_OUTPUT
 
+      - name: Resolve ALB and listener ARNs
+        id: albinfo
+        run: |
+          set -euo pipefail
+          DNS="${{ steps.outs.outputs.alb_dns }}"
+          # DNS から ALB ARN を引く
+          ALB_ARN=$(aws elbv2 describe-load-balancers \
+            --query "LoadBalancers[?DNSName=='$DNS'].LoadBalancerArn" \
+            --output text)
+          test -n "$ALB_ARN" || { echo "[FATAL] ALB ARN not found by DNS=$DNS"; exit 1; }
+          echo "alb_arn=$ALB_ARN" >> $GITHUB_OUTPUT
+
+          # 既存の HTTP:80 リスナーを探す（無ければ空文字）
+          LISTENER_ARN=$(aws elbv2 describe-listeners \
+            --load-balancer-arn "$ALB_ARN" \
+            --query "Listeners[?Protocol=='HTTP' && Port==\`80\`][0].ListenerArn" \
+            --output text 2>/dev/null || true)
+          if [ "$LISTENER_ARN" = "None" ] || [ -z "$LISTENER_ARN" ]; then
+            LISTENER_ARN=""
+          fi
+          echo "listener_arn=$LISTENER_ARN" >> $GITHUB_OUTPUT
+          echo "[INFO] ALB_ARN=$ALB_ARN LISTENER_ARN=${LISTENER_ARN:-<none>}"
+
       - name: Save outputs artifact
         uses: actions/upload-artifact@v4
         with:
@@ -249,6 +272,41 @@ jobs:
             --target-group-arn "$TG_ARN" \
             --targets "Id=$TASK_IP,Port=$PORT"
 
+      - name: Ensure listener forwards to our TG
+        run: |
+          set -euo pipefail
+          ALB_ARN="${{ steps.albinfo.outputs.alb_arn }}"
+          TG_ARN="${{ steps.outs.outputs.tg_arn }}"
+          LSN="${{ steps.albinfo.outputs.listener_arn }}"
+
+          if [ -z "$LSN" ]; then
+            echo "[INFO] No HTTP:80 listener. Creating one."
+            LSN=$(aws elbv2 create-listener \
+              --load-balancer-arn "$ALB_ARN" \
+              --protocol HTTP --port 80 \
+              --default-actions "Type=forward,TargetGroupArn=$TG_ARN" \
+              --query 'Listeners[0].ListenerArn' --output text)
+            echo "[INFO] Created LISTENER_ARN=$LSN"
+          else
+            # 既存リスナーが別TGを向いていたら張り替える
+            CUR=$(aws elbv2 describe-listeners --listener-arn "$LSN" \
+              --query 'Listeners[0].DefaultActions[0].ForwardConfig.TargetGroups[0].TargetGroupArn' \
+              --output text 2>/dev/null || true)
+            if [ "$CUR" != "$TG_ARN" ]; then
+              echo "[INFO] Listener points to different TG. Modifying to $TG_ARN"
+              aws elbv2 modify-listener \
+                --listener-arn "$LSN" \
+                --default-actions "Type=forward,TargetGroupArn=$TG_ARN" \
+                >/dev/null
+            else
+              echo "[INFO] Listener already forwards to our TG"
+            fi
+          fi
+
+          # 参考出力（証跡）
+          aws elbv2 describe-listeners --listener-arn "$LSN" \
+            --query 'Listeners[0].{Port:Port,Action:DefaultActions[0].Type,TG:DefaultActions[0].ForwardConfig.TargetGroups[0].TargetGroupArn}'
+
       - name: Ensure TG health check uses /healthz
         run: |
           set -euo pipefail
@@ -284,6 +342,15 @@ jobs:
             sleep 2
           done
           echo "[INFO] healthy OK"
+
+      - name: Dump LB wiring on failure
+        if: failure()
+        run: |
+          mkdir -p evidence
+          aws elbv2 describe-listeners --load-balancer-arn "${{ steps.albinfo.outputs.alb_arn }}" \
+            > evidence/$(date +%Y%m%d_%H%M%S)_listeners.json || true
+          aws elbv2 describe-target-health --target-group-arn "${{ steps.outs.outputs.tg_arn }}" \
+            > evidence/$(date +%Y%m%d_%H%M%S)_tg_health.json || true
 
       - name: Smoke hit /healthz and /dbcheck
         run: |
