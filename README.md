@@ -1,4 +1,4 @@
-## Papyrus
+## Papyrus Invoice
 
 RDSから商品情報を取得し、GUI上の納品リストから納品書をPDF出力するポートフォリオ。
 
