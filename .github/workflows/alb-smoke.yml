@@ -86,7 +86,7 @@ jobs:
         run: |
           cat > dev.auto.tfvars <<'TFV'
           vpc_id            = ${{ env.VPC_ID }}
-          PUBLIC_SUBNET_ids = ${{ env.PUBLIC_SUBNET_IDS_JSON }}
+          public_subnet_ids = ${{ env.PUBLIC_SUBNET_IDS_JSON }}
           container_port    = 5000
           allow_cidrs       = ["0.0.0.0/0"]
           ecs_tasks_sg_id   = "${{ secrets.ECS_TASK_SG_ID }}"
