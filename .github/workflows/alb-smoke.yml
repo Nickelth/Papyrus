@@ -11,13 +11,19 @@ env:
   ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
   ECS_SERVICE: ${{ vars.ECS_SERVICE }}
   CONTAINER_PORT: ${{ vars.CONTAINER_PORT }}
-  EVID_DIR: docs/evidence
+  EVID_DIR: ../docs/evidence
 
 jobs:
   smoke:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Where am I
+        run: |
+          pwd
+          echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
+          ls -la
 
       - name: Setup Python deps
         run: |
@@ -396,11 +402,17 @@ jobs:
       - name: Dump TG health and listeners on failure
         if: failure()
         run: |
-          mkdir -p evidence
+          mkdir -p "${EVID_DIR}"
           aws elbv2 describe-target-health --target-group-arn "${{ steps.outs.outputs.tg_arn }}" \
-            > evidence/$(date +%Y%m%d_%H%M%S)_tg_health.json || true
+            > ${EVID_DIR}/$(date +%Y%m%d_%H%M%S)_tg_health.json || true
           aws elbv2 describe-listeners --load-balancer-arn "${{ steps.albinfo.outputs.alb_arn }}" \
-            > evidence/$(date +%Y%m%d_%H%M%S)_listeners.json || true
+            > ${EVID_DIR}/$(date +%Y%m%d_%H%M%S)_listeners.json || true
+
+      - name: Where am I
+        run: |
+          pwd
+          echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
+          ls -la
 
       - name: Smoke hit /healthz and /dbcheck
         run: |
@@ -417,7 +429,7 @@ jobs:
         run: |
           mkdir -p evidence
           aws elbv2 describe-target-health --target-group-arn "${{ steps.outs.outputs.tg_arn }}" \
-            > "evidence/$(date +%Y%m%d_%H%M%S)_tg_health_on_fail.json" || true
+            > "${EVID_DIR}/$(date +%Y%m%d_%H%M%S)_tg_health_on_fail.json" || true
 
       - name: Upload smoke evidence
         if: always()
@@ -434,7 +446,7 @@ jobs:
           name: alb-smoke-artifacts
           path: |
             infra/20-alb/terraform.tfstate
-            evidence/*.log
+            ${EVID_DIR}/*.log
 
       - name: Revoke ALB -> ECS task SG ingress (cleanup)
         if: always()
