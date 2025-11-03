@@ -8,6 +8,7 @@ from papyrus.config_runtime import load_config, init_db_pool  # ★ 追加
 import os
 from papyrus.blueprints.dbcheck import bp as dbcheck_bp
 from papyrus.blueprints.healthz import bp as healthz_bp
+from .db import create_pool
 
 def create_app():
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -21,6 +22,8 @@ def create_app():
 
     # ★ DBプールを初期化して app に保持
     app.config["DB_POOL"] = init_db_pool(cfg)
+    
+    app.config["DB_POOL"] = create_pool()
 
     init_auth(app)
     init_db(app)
