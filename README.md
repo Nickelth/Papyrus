@@ -6,6 +6,7 @@ RDSから商品情報を取得し、GUI上の納品リストから納品書をPD
 [![ECS Deploy](https://github.com/Nickelth/papyrus-invoice/actions/workflows/ecs-deploy.yml/badge.svg)](../../actions)
 [![ECS Scaling](https://github.com/Nickelth/papyrus-invoice/actions/workflows/ecs-scale.yml/badge.svg)](../../actions)
 [![ALB Smoke](https://github.com/Nickelth/papyrus-invoice/actions/workflows/alb-smoke.yml/badge.svg)](../../actions)
+[![Audit Evidence](https://github.com/Nickelth/papyrus-invoice/actions/workflows/audit-evidence.yml/badge.svg)](../../actions)
 
 ### ルール
 
@@ -60,11 +61,11 @@ papyrus-invoice/
 docker compose --env-file .env.dev build --no-cache --progress=plain
 ```
 
-### CLoudWatch Alarm IaC監査
+### CloudWatch Alarm IaC監査
 
 リポジトリクローン後、CloudShell上で入力
 
-CLoudWatch Alarm監査体制をIaCで構築
+#### CloudWatch Alarm監査体制をIaCで構築
 
 - ECS メモリ >80% (平均2/5分)
 - ALB 5xx% >1 (Sum 2/5分)
@@ -79,12 +80,30 @@ terraform apply  -var-file=dev.tfvars -auto-approve \
   | tee "$EVID/$(date +%Y%m%d_%H%M%S)_monitor_tf_apply.log"
 ```
 
+#### AWS CloudTrail & Config 直近 24h をエクスポート
+
+```bash
+EVID=~/papyrus-invoice/docs/evidence
+TS=$(date +%Y%m%d_%H%M%S)
+START=$(date -u -d '24 hours ago' +%Y-%m-%dT%H:%M:%SZ)
+END=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+aws cloudtrail lookup-events \
+  --start-time "$START" --end-time "$END" \
+  > "$EVID/$(date +%Y%m%d_%H%M%S)_cloudtrail_24h.json"
+
+aws configservice describe-configuration-recorders \
+  > "$EVID/$(date +%Y%m%d_%H%M%S)_config_recorders.json" || true
+aws configservice describe-delivery-channels \
+  > "$EVID/$(date +%Y%m%d_%H%M%S)_config_delivery_channels.json" || true
+```
+
 ### Github Actions CI/CD
 
 - `ecr-push.yml`: `master`ブランチデプロイ時に自動実行、ECRイメージを更新。
 - `ecs-deploy.yml`: Actionsで任意実行。ECSタスクをdesire=1にしてサービス起動。
 - `ecs-scale.yml`: Actionsで任意実行。ECSタスクをdesire=0にしてサービス起動。
-- `alb-smoke.yml`: Actionsで任意実行。ALB/TG/SGを作成→疎通→破壊。
+- `alb-smoke.yml`: Actionsで任意実行。ALB/TG/SGを作成→疎通→破壊。証跡をリポに追加。
+- `audit-evidence.yml`: Actionsで任意実行。直近24hのCloudTrailとConfigを取得。証跡をリポに追加。
 
 ### 完成定義
 
@@ -92,7 +111,7 @@ terraform apply  -var-file=dev.tfvars -auto-approve \
 
 - [x] **最小スキーマ適用済み**（init.sql 投入） 
 
-- [ ] **観測の入口**として CloudWatch Logs に構造化ログが出ている（JSON1行） 
+- [x] **観測の入口**として CloudWatch Logs に構造化ログが出ている（JSON1行） 
 
 - [x] **IaC 薄切り**（RDS/SG/ParameterGroup だけTerraform化。完全Importは後回し） 
 
@@ -100,4 +119,6 @@ terraform apply  -var-file=dev.tfvars -auto-approve \
 
 - [x] **Parameter Group変更の反映証跡**(再起動含む)、トランザクションのログ1件、再試行ロジックの有無 
 
-- [ ] **CLI履歴の証跡化**: scriptコマンドかbash -xログ、加えてCloudTrail + Configを記事に添える
+- [x] **CLI履歴の証跡化**: scriptコマンドかbash -xログ、加えてCloudTrail + Configを記事に添える 
+  - `script`コマンド → `alb-smoke.yml`に実装
+  - CloudTrail + Config → `audit-evidence.yml`に実装
