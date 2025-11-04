@@ -23,12 +23,6 @@ jobs:
           ref: dev
           fetch-depth: 0
 
-      - name: Where am I
-        run: |
-          pwd
-          echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
-          ls -la
-
       - name: Setup Python deps
         run: |
           python -m pip install --upgrade pip
@@ -44,45 +38,34 @@ jobs:
         run: |
           python - <<'PY'
           from papyrus.preflight_app import create_app_skeleton
-
           app = create_app_skeleton()
           routes = sorted([r.rule for r in app.url_map.iter_rules()])
           print("ROUTES:", routes)
-
           assert "/dbcheck" in routes, "dbcheck missing"
           assert "/healthz" in routes, "healthz missing"
           PY
-          
-      - name: Preflight and connection information drift detection
+
+      - name: Drift detection (Secrets vs RDS endpoint/port)
         env:
           AWS_REGION: ${{ env.AWS_REGION }}
         run: |
           set -euo pipefail
-
           SEC_JSON=$(aws secretsmanager get-secret-value \
             --secret-id papyrus/prd/db \
             --region "$AWS_REGION" \
-            --query SecretString \
-            --output text)
-
+            --query SecretString --output text)
           EP=$(aws rds describe-db-instances \
             --db-instance-identifier papyrus-pg16-dev \
             --region "$AWS_REGION" \
-            --query 'DBInstances[0].Endpoint.Address' \
-            --output text)
-
+            --query 'DBInstances[0].Endpoint.Address' --output text)
           PORT=$(aws rds describe-db-instances \
             --db-instance-identifier papyrus-pg16-dev \
             --region "$AWS_REGION" \
-            --query 'DBInstances[0].Endpoint.Port' \
-            --output text)
-
+            --query 'DBInstances[0].Endpoint.Port' --output text)
           SEC_HOST=$(echo "$SEC_JSON" | jq -r .host)
           SEC_PORT=$(echo "$SEC_JSON" | jq -r .port)
-
           echo "[INFO] SEC_HOST=$SEC_HOST RDS_HOST=$EP"
           echo "[INFO] SEC_PORT=$SEC_PORT RDS_PORT=$PORT"
-
           test "$SEC_HOST" = "$EP"   || { echo "FATAL: RDS endpoint drift"; exit 1; }
           test "$SEC_PORT" = "$PORT" || { echo "FATAL: RDS port drift"; exit 1; }
 
@@ -108,58 +91,34 @@ jobs:
         env:
           TF_IN_AUTOMATION: "1"
         run: |
+          set -euo pipefail
+          mkdir -p ${EVID_DIR}
           terraform init -input=false -upgrade=false
           terraform validate
-          terraform apply -auto-approve -var-file=dev.auto.tfvars
+          terraform plan   -var-file=dev.auto.tfvars \
+            | tee ${EVID_DIR}/$(date +%Y%m%d_%H%M%S)_alb_plan.log
+          terraform apply  -var-file=dev.auto.tfvars -auto-approve \
+            | tee ${EVID_DIR}/$(date +%Y%m%d_%H%M%S)_alb_apply.log
 
       - name: Export outputs
         id: outs
         working-directory: infra/20-alb
         run: |
           set -euo pipefail
+          echo "alb_dns=$(terraform output -raw alb_dns_name)" >> $GITHUB_OUTPUT
+          echo "tg_arn=$(terraform output -raw tg_arn)"       >> $GITHUB_OUTPUT
+          echo "alb_sg_id=$(terraform output -raw alb_sg_id)" >> $GITHUB_OUTPUT
+          echo "task_sg_id=${{ secrets.ECS_TASK_SG_ID }}"      >> $GITHUB_OUTPUT
 
-          ALB_DNS=$(terraform output -raw alb_dns_name)
-          TG_ARN=$(terraform output -raw tg_arn)
-          ALB_SG=$(terraform output -raw alb_sg_id)
-          TASK_SG="${{ secrets.ECS_TASK_SG_ID }}"
-
-          test -n "$ALB_SG"  || { echo "FATAL: alb_sg_id empty"; exit 1; }
-          test -n "$TASK_SG" || { echo "FATAL: task_sg_id empty (check secret ECS_TASK_SG_ID)"; exit 1; }
-
-          echo "alb_dns=$ALB_DNS"    >> $GITHUB_OUTPUT
-          echo "tg_arn=$TG_ARN"      >> $GITHUB_OUTPUT
-          echo "alb_sg_id=$ALB_SG"   >> $GITHUB_OUTPUT
-          echo "task_sg_id=$TASK_SG" >> $GITHUB_OUTPUT
-
-      - name: Resolve ALB and listener ARNs
+      - name: Resolve ALB ARN
         id: albinfo
         run: |
           set -euo pipefail
           DNS="${{ steps.outs.outputs.alb_dns }}"
-          # DNS から ALB ARN を引く
           ALB_ARN=$(aws elbv2 describe-load-balancers \
-            --query "LoadBalancers[?DNSName=='$DNS'].LoadBalancerArn" \
-            --output text)
+            --query "LoadBalancers[?DNSName=='$DNS'].LoadBalancerArn" --output text)
           test -n "$ALB_ARN" || { echo "[FATAL] ALB ARN not found by DNS=$DNS"; exit 1; }
           echo "alb_arn=$ALB_ARN" >> $GITHUB_OUTPUT
-
-          # 既存の HTTP:80 リスナーを探す（無ければ空文字）
-          LISTENER_ARN=$(aws elbv2 describe-listeners \
-            --load-balancer-arn "$ALB_ARN" \
-            --query "Listeners[?Protocol=='HTTP' && Port==\`80\`][0].ListenerArn" \
-            --output text 2>/dev/null || true)
-          if [ "$LISTENER_ARN" = "None" ] || [ -z "$LISTENER_ARN" ]; then
-            LISTENER_ARN=""
-          fi
-          echo "listener_arn=$LISTENER_ARN" >> $GITHUB_OUTPUT
-          echo "[INFO] ALB_ARN=$ALB_ARN LISTENER_ARN=${LISTENER_ARN:-<none>}"
-
-      - name: Save outputs artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: alb-outputs
-          path: |
-            infra/20-alb/terraform.tfstate
 
       - name: ECS task inspect (get IP and SG)
         id: ecsinfo
@@ -168,43 +127,23 @@ jobs:
           CLUSTER="${{ env.ECS_CLUSTER }}"
           SERVICE="${{ env.ECS_SERVICE }}"
           REGION="${{ env.AWS_REGION }}"
-
           TASK_ARN=$(aws ecs list-tasks \
-            --cluster "$CLUSTER" \
-            --service-name "$SERVICE" \
-            --desired-status RUNNING \
-            --region "$REGION" \
-            --query 'taskArns[0]' \
-            --output text)
-
-          if [ -z "$TASK_ARN" ] || [ "$TASK_ARN" = "None" ]; then
-            echo "[FATAL] no RUNNING task found in cluster=$CLUSTER service=$SERVICE" >&2
-            exit 1
-          fi
-          echo "TASK_ARN=$TASK_ARN"
-
+            --cluster "$CLUSTER" --service-name "$SERVICE" \
+            --desired-status RUNNING --region "$REGION" \
+            --query 'taskArns[0]' --output text)
+          [ -n "$TASK_ARN" ] && [ "$TASK_ARN" != "None" ] || { echo "[FATAL] no RUNNING task"; exit 1; }
           ENI_ID=$(aws ecs describe-tasks \
-            --cluster "$CLUSTER" \
-            --tasks "$TASK_ARN" \
-            --region "$REGION" \
-            --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' \
-            --output text)
-
+            --cluster "$CLUSTER" --tasks "$TASK_ARN" --region "$REGION" \
+            --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' --output text)
           TASK_IP=$(aws ec2 describe-network-interfaces \
-            --network-interface-ids "$ENI_ID" \
-            --region "$REGION" \
-            --query 'NetworkInterfaces[0].PrivateIpAddress' \
-            --output text)
-
+            --network-interface-ids "$ENI_ID" --region "$REGION" \
+            --query 'NetworkInterfaces[0].PrivateIpAddress' --output text)
           ECS_TASK_SG=$(aws ec2 describe-network-interfaces \
-            --network-interface-ids "$ENI_ID" \
-            --region "$REGION" \
-            --query 'NetworkInterfaces[0].Groups[0].GroupId' \
-            --output text)
-
-          echo "task_arn=$TASK_ARN"        >> $GITHUB_OUTPUT
-          echo "task_ip=$TASK_IP"          >> $GITHUB_OUTPUT
-          echo "ecs_task_sg=$ECS_TASK_SG"  >> $GITHUB_OUTPUT
+            --network-interface-ids "$ENI_ID" --region "$REGION" \
+            --query 'NetworkInterfaces[0].Groups[0].GroupId' --output text)
+          echo "task_arn=$TASK_ARN"       >> $GITHUB_OUTPUT
+          echo "task_ip=$TASK_IP"         >> $GITHUB_OUTPUT
+          echo "ecs_task_sg=$ECS_TASK_SG" >> $GITHUB_OUTPUT
 
       - name: Authorize ALB -> ECS task SG ingress
         run: |
@@ -212,27 +151,15 @@ jobs:
           REGION="${{ env.AWS_REGION }}"
           ALB_SG="${{ steps.outs.outputs.alb_sg_id }}"
           ECS_TASK_SG="${{ steps.ecsinfo.outputs.ecs_task_sg }}"
-
-          echo "[INFO] authorizing $ALB_SG -> $ECS_TASK_SG tcp/5000"
-
+          echo "[INFO] authorizing $ALB_SG -> $ECS_TASK_SG tcp/${{ env.CONTAINER_PORT }}"
           set +e
           OUT=$(aws ec2 authorize-security-group-ingress \
-            --group-id "$ECS_TASK_SG" \
-            --region "$REGION" \
-            --ip-permissions "IpProtocol=tcp,FromPort=5000,ToPort=5000,UserIdGroupPairs=[{GroupId=$ALB_SG}]" \
-            2>&1)
+            --group-id "$ECS_TASK_SG" --region "$REGION" \
+            --ip-permissions "IpProtocol=tcp,FromPort=${{ env.CONTAINER_PORT }},ToPort=${{ env.CONTAINER_PORT }},UserIdGroupPairs=[{GroupId=$ALB_SG}]" 2>&1)
           RC=$?
           set -e
-
           if [ $RC -ne 0 ]; then
-            echo "$OUT" | grep -q 'InvalidPermission.Duplicate'
-            if [ $? -eq 0 ]; then
-              echo "[WARN] ingress already existed, continuing"
-            else
-              echo "$OUT" >&2
-              echo "[FATAL] unexpected error from authorize-security-group-ingress (code $RC)" >&2
-              exit $RC
-            fi
+            echo "$OUT" | grep -q 'InvalidPermission.Duplicate' && echo "[WARN] ingress already existed" || { echo "$OUT" >&2; exit $RC; }
           else
             echo "[INFO] ingress created"
           fi
@@ -241,15 +168,10 @@ jobs:
         run: |
           set -euo pipefail
           ALB_DNS="${{ steps.outs.outputs.alb_dns }}"
-          TG_ARN="${{ steps.outs.outputs.tg_arn }}"
-
-          # ALB ARN -> 有効AZ
           ALB_ARN=$(aws elbv2 describe-load-balancers \
             --query "LoadBalancers[?DNSName=='$ALB_DNS'].LoadBalancerArn" --output text)
           ALB_ZONES=$(aws elbv2 describe-load-balancers --load-balancer-arns "$ALB_ARN" \
             --query 'LoadBalancers[0].AvailabilityZones[].ZoneName' --output text)
-
-          # タスクのAZ
           CLUSTER="${{ env.ECS_CLUSTER }}"
           SERVICE="${{ env.ECS_SERVICE }}"
           TASK_ARN=$(aws ecs list-tasks --cluster "$CLUSTER" --service-name "$SERVICE" \
@@ -258,118 +180,52 @@ jobs:
             --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' --output text)
           TASK_AZ=$(aws ec2 describe-network-interfaces --network-interface-ids "$ENI_ID" \
             --query 'NetworkInterfaces[0].AvailabilityZone' --output text)
-
           echo "[INFO] ALB zones: $ALB_ZONES"
           echo "[INFO] TASK az  : $TASK_AZ"
-
           echo "$ALB_ZONES" | tr '\t' '\n' | grep -qx "$TASK_AZ" || {
-            echo "[FATAL] AZ mismatch: ALB not enabled in $TASK_AZ. This causes TargetHealth=unused."
-            echo "[HINT] Add a public subnet for $TASK_AZ to PUBLIC_SUBNET_IDS_JSON (infra/20-alb), or pin ECS service to ALB-enabled AZs."
-            exit 1
-          }
+            echo "[FATAL] AZ mismatch: ALB not enabled in $TASK_AZ. This causes TargetHealth=unused."; exit 1; }
 
       - name: Register target
         run: |
           set -euo pipefail
-          TG_ARN="${{ steps.outs.outputs.tg_arn }}"
-          TASK_IP="${{ steps.ecsinfo.outputs.task_ip }}"
-          PORT="${{ env.CONTAINER_PORT }}"
-
-          echo "Registering $TASK_IP:$PORT to $TG_ARN"
-
           aws elbv2 register-targets \
-            --target-group-arn "$TG_ARN" \
-            --targets "Id=$TASK_IP,Port=$PORT"
-
-      - name: Verify target is registered
-        run: |
-          set -euo pipefail
-          TG_ARN="${{ steps.outs.outputs.tg_arn }}"
-          aws elbv2 register-targets \
-            --target-group-arn "$TG_ARN" \
+            --target-group-arn "${{ steps.outs.outputs.tg_arn }}" \
             --targets "Id=${{ steps.ecsinfo.outputs.task_ip }},Port=${{ env.CONTAINER_PORT }}"
-          # 登録済みターゲット一覧を確認
-          aws elbv2 describe-target-health --target-group-arn "$TG_ARN" \
-            --query 'TargetHealthDescriptions[].{ip:Target.Id,port:Target.Port,state:TargetHealth.State}' \
-            --output table
-          COUNT=$(aws elbv2 describe-target-health --target-group-arn "$TG_ARN" \
-            --query 'length(TargetHealthDescriptions[])' --output text)
-          [ "$COUNT" -ge 1 ] || { echo "[FATAL] No targets in TG after registration"; exit 1; }
 
       - name: Ensure listener forwards to our TG
         run: |
           set -euo pipefail
           ALB_ARN="${{ steps.albinfo.outputs.alb_arn }}"
           TG_ARN="${{ steps.outs.outputs.tg_arn }}"
-
           get_listener_arn() {
             aws elbv2 describe-listeners \
               --load-balancer-arn "$ALB_ARN" \
               --query "Listeners[?Protocol=='HTTP' && Port==\`80\`].ListenerArn | [0]" \
               --output text 2>/dev/null | sed 's/^None$//'
           }
-
           LSN="$(get_listener_arn || true)"
-
           if [ -z "${LSN:-}" ]; then
-            echo "[INFO] No HTTP:80 listener. Creating one."
             set +e
             CREATE_OUT=$(aws elbv2 create-listener \
-              --load-balancer-arn "$ALB_ARN" \
-              --protocol HTTP --port 80 \
-              --default-actions "Type=forward,TargetGroupArn=$TG_ARN" 2>&1)
-            RC=$?
+              --load-balancer-arn "$ALB_ARN" --protocol HTTP --port 80 \
+              --default-actions "Type=forward,TargetGroupArn=$TG_ARN" 2>&1); RC=$?
             set -e
             if [ $RC -ne 0 ]; then
-              echo "$CREATE_OUT" | grep -q "DuplicateListener"
-              if [ $? -eq 0 ]; then
-                echo "[WARN] DuplicateListener; refetching existing listener"
-                sleep 2
-                LSN="$(get_listener_arn || true)"
-              else
-                echo "$CREATE_OUT" >&2
-                exit $RC
-              fi
+              echo "$CREATE_OUT" | grep -q "DuplicateListener" && LSN="$(get_listener_arn || true)" || { echo "$CREATE_OUT" >&2; exit $RC; }
             else
-              # create-listener の JSON から ARN を抜く
               LSN=$(printf '%s' "$CREATE_OUT" | jq -r '.Listeners[0].ListenerArn' 2>/dev/null || true)
             fi
           fi
-
-          if [ -z "${LSN:-}" ]; then
-            echo "[FATAL] Failed to resolve HTTP:80 listener ARN"
-            aws elbv2 describe-listeners --load-balancer-arn "$ALB_ARN" || true
-            exit 1
-          fi
-
-          echo "[INFO] Using LISTENER_ARN=$LSN"
-
-          # 既定アクションの TG を取得（両形対応: TargetGroupArn or ForwardConfig.TargetGroups[0].TargetGroupArn）
+          [ -n "${LSN:-}" ] || { echo "[FATAL] Failed to resolve HTTP:80 listener ARN"; exit 1; }
           CUR_TG=$(aws elbv2 describe-listeners --listener-arn "$LSN" \
-                     --query 'Listeners[0].DefaultActions[0].TargetGroupArn' \
-                     --output text 2>/dev/null || true)
-          if [ -z "$CUR_TG" ] || [ "$CUR_TG" = "None" ]; then
-            CUR_TG=$(aws elbv2 describe-listeners --listener-arn "$LSN" \
-                        --query 'Listeners[0].DefaultActions[0].ForwardConfig.TargetGroups[0].TargetGroupArn' \
-                        --output text 2>/dev/null || true)
-            [ "$CUR_TG" = "None" ] && CUR_TG=""
-          fi
-          echo "[INFO] Current listener TG=${CUR_TG:-<none>}"
-
-          if [ "$CUR_TG" != "$TG_ARN" ] && [ -n "$TG_ARN" ]; then
-            echo "[INFO] Modifying listener to forward to TG=$TG_ARN"
-            aws elbv2 modify-listener \
-              --listener-arn "$LSN" \
-              --default-actions "Type=forward,TargetGroupArn=$TG_ARN" \
-              >/dev/null
-          else
-            echo "[INFO] Listener already forwards to our TG"
-          fi
-
-          # 証跡
+            --query 'Listeners[0].DefaultActions[0].TargetGroupArn' --output text 2>/dev/null || true)
+          [ -z "$CUR_TG" -o "$CUR_TG" = "None" ] && CUR_TG=$(aws elbv2 describe-listeners --listener-arn "$LSN" \
+            --query 'Listeners[0].DefaultActions[0].ForwardConfig.TargetGroups[0].TargetGroupArn' --output text 2>/dev/null || true)
+          [ "$CUR_TG" = "None" ] && CUR_TG=""
+          [ "$CUR_TG" = "$TG_ARN" ] || aws elbv2 modify-listener --listener-arn "$LSN" \
+            --default-actions "Type=forward,TargetGroupArn=$TG_ARN" >/dev/null
           aws elbv2 describe-listeners --listener-arn "$LSN" \
-            --query 'Listeners[0].{Port:Port,Action:DefaultActions[0].Type}' \
-            --output json
+            --query 'Listeners[0].{Port:Port,Action:DefaultActions[0].Type}' --output json
 
       - name: Ensure TG health check uses /healthz
         run: |
@@ -394,8 +250,7 @@ jobs:
           deadline=$((SECONDS+120))
           while :; do
             STATE=$(aws elbv2 describe-target-health --target-group-arn "$TG_ARN" \
-              --query 'TargetHealthDescriptions[0].TargetHealth.State' \
-              --output text 2>/dev/null || true)
+              --query 'TargetHealthDescriptions[0].TargetHealth.State' --output text 2>/dev/null || true)
             echo "[INFO] target state = ${STATE:-<none>}"
             [ "$STATE" = "healthy" ] && break
             [ $SECONDS -gt $deadline ] && { echo "[FATAL] Target not healthy in time"; exit 1; }
@@ -403,7 +258,46 @@ jobs:
           done
           echo "[INFO] healthy OK"
 
-      - name: Dump TG health and listeners on failure
+      - name: Smoke hit /healthz and /dbcheck
+        run: |
+          set -euo pipefail
+          mkdir -p "${EVID_DIR}"
+          DNS="${{ steps.outs.outputs.alb_dns }}"
+          TS=$(date +%Y%m%d_%H%M%S)
+          curl -si "http://$DNS/healthz" | tee "${EVID_DIR}/${TS}_healthz.log"
+          curl -si "http://$DNS/dbcheck" | tee "${EVID_DIR}/${TS}_dbcheck.log"
+
+      - name: Collect CloudWatch structured logs (/healthz, /dbcheck)
+        if: always()
+        env:
+          LOG_GROUP: /ecs/papyrus
+          REGION: ${{ env.AWS_REGION }}
+        run: |
+          set -euo pipefail
+          mkdir -p "${EVID_DIR}"
+          TS=$(date +%Y%m%d_%H%M%S)
+          START=$(date -u -d '10 minutes ago' +%s000)
+          sleep 5
+          fetch() {
+            local route="$1"
+            local out_json="${EVID_DIR}/${TS}_cloudwatch_${route}.json"
+            local out_line="${EVID_DIR}/${TS}_${route}_json_line.log"
+            for i in $(seq 1 10); do
+              aws logs filter-log-events \
+                --log-group-name "$LOG_GROUP" --region "$REGION" \
+                --start-time "$START" \
+                --filter-pattern "\"route\" \"/${route}\"" \
+                --max-items 50 > "$out_json" || true
+              jq -r '.events[0].message // empty' "$out_json" > "$out_line"
+              [ -s "$out_line" ] && { echo "[INFO] Found /${route} JSON"; return 0; }
+              sleep 3
+            done
+            echo "[WARN] No CloudWatch JSON for /${route}"
+          }
+          fetch healthz
+          fetch dbcheck
+
+      - name: Dump target health and listeners on failure
         if: failure()
         run: |
           mkdir -p "${EVID_DIR}"
@@ -412,46 +306,6 @@ jobs:
           aws elbv2 describe-listeners --load-balancer-arn "${{ steps.albinfo.outputs.alb_arn }}" \
             > ${EVID_DIR}/$(date +%Y%m%d_%H%M%S)_listeners.json || true
 
-      - name: Where am I
-        run: |
-          pwd
-          echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
-          ls -la
-
-      - name: Smoke hit /healthz and /dbcheck
-        run: |
-          set -euo pipefail
-          mkdir -p "${EVID_DIR}"
-          DNS="${{ steps.outs.outputs.alb_dns }}"
-          TS=$(date +%Y%m%d_%H%M%S)
-
-          curl -si "http://$DNS/healthz"  | tee "${EVID_DIR}/${TS}_healthz.log"
-          curl -si "http://$DNS/dbcheck"  | tee "${EVID_DIR}/${TS}_dbcheck.log"
-
-      - name: Dump target health on failure
-        if: failure()
-        run: |
-          mkdir -p evidence
-          aws elbv2 describe-target-health --target-group-arn "${{ steps.outs.outputs.tg_arn }}" \
-            > "${EVID_DIR}/$(date +%Y%m%d_%H%M%S)_tg_health_on_fail.json" || true
-
-      - name: Upload smoke evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: smoke-${{ github.run_id }}
-          path: |
-            ${EVID_DIR}/
-            infra/20-alb/terraform.tfstate
-
-      - name: Save outputs artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: alb-smoke-artifacts
-          path: |
-            infra/20-alb/terraform.tfstate
-            ${EVID_DIR}/*.log
-
       - name: Revoke ALB -> ECS task SG ingress (cleanup)
         if: always()
         run: |
@@ -459,14 +313,9 @@ jobs:
           ALB_SG="${{ steps.outs.outputs.alb_sg_id || '' }}"
           TASK_SG="${{ steps.outs.outputs.task_sg_id || '' }}"
           PORT="${{ env.CONTAINER_PORT }}"
-
           if [ -z "$ALB_SG" ] || [ -z "$TASK_SG" ]; then
-            echo "[WARN] skip revoke: ALB_SG or TASK_SG empty"
-            exit 0
-          fi
-
+            echo "[WARN] skip revoke: ALB_SG or TASK_SG empty"; exit 0; fi
           echo "[INFO] revoking $ALB_SG -> $TASK_SG tcp/$PORT"
-
           aws ec2 revoke-security-group-ingress \
             --group-id "$TASK_SG" \
             --ip-permissions "IpProtocol=tcp,FromPort=$PORT,ToPort=$PORT,UserIdGroupPairs=[{GroupId=$ALB_SG}]"
@@ -474,7 +323,11 @@ jobs:
       - name: Terraform destroy (always)
         if: always()
         working-directory: infra/20-alb
-        run: terraform destroy -auto-approve -var-file=dev.auto.tfvars
+        run: |
+          set -euo pipefail
+          mkdir -p ../../${EVID_DIR}
+          terraform destroy -auto-approve -var-file=dev.auto.tfvars \
+            | tee ../../${EVID_DIR}/$(date +%Y%m%d_%H%M%S)_alb_destroy.log
 
       - name: Create PR with evidence to dev
         if: always()
@@ -484,30 +337,18 @@ jobs:
           set -euo pipefail
           TS=$(date -u +%Y%m%d-%H%M%S)
           BR="evidence/smoke-${TS}"
-
-          # 確実に dev から分岐
           git fetch origin dev
           git checkout dev
           git pull --ff-only origin dev
-
-          # 新しいブランチを切る
           git switch -c "$BR"
-
-          # 追跡対象（必要に応じて増減可）
-          git add "${EVID_DIR}"/*.log || true
-
-          # 何も変更がないなら静かに終了
+          git add "${EVID_DIR}"/*.log "${EVID_DIR}"/*.json || true
           git diff --cached --quiet && { echo "[INFO] nothing to commit"; exit 0; }
-
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git commit -m "evidence: smoke ${TS}"
           git push -u origin "$BR"
-
-          # PR を dev 宛に作成
           gh pr create \
-            --base dev \
-            --head "$BR" \
+            --base dev --head "$BR" \
             --title "evidence: smoke ${TS}" \
-            --body "Auto-collected smoke evidence logs and (optional) ALB TG tfstate.\nRegion: us-west-2\nThis PR was generated by CI." \
+            --body "Auto-collected smoke evidence logs.\nRegion: us-west-2\nGenerated by CI." \
             --label "evidence,automation" || true

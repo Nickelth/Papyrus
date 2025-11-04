@@ -1,3 +1,49 @@
+## 2025-11-03  (Papyrus Invoice)
+
+### 目的
+- **観測の入口**を固定化し、/healthz と /dbcheck の到達性を数値で示す。
+- **/dbcheck の安定化**（SSL・コネクション管理）により 500/落ちを解消。
+- **CIエビデンスをリポジトリ直下に保存**して、CloudShell/面接資料から即参照可能にする。
+
+### 変更内容
+- **アプリ (/dbcheck)**
+  - 接続プールを `sslmode=require` かつ TCP keepalive 有効で初期化。
+  - `OperationalError` 検知時は壊れたコネクションをプールから除外し **1回だけ再接続**してリトライ。
+  - レスポンスを単一JSONに統一：`{"ok": true, "inserted": <bool>}`。
+  - 失敗時は `{"ok": false, "error": "..."}` を返却し、構造化ログ（JSON 1行）へ出力。
+- **CI（alb-smoke.yml）**
+  - **Listener→TG の冪等張り替え**（DuplicateListener耐性）。
+  - **AZミスマッチ検知**（ALBの有効AZとタスクAZが不一致なら Fail）。
+  - **カスタム healthy 待機**（`describe-target-health` ループ）。
+  - **SG重複回避**（`InvalidPermission.Duplicate` を握って続行）。
+  - **エビデンス保存先を `docs/evidence/` に変更**し、ログをリポ直配置。
+  - **dev に対する自動PR**（`evidence/smoke-<timestamp>` ブランチにコミット→PR作成）。
+- **ALB/TG**
+  - 健診パスを `/healthz`（200–399）で固定。
+  - スモーク用ALBのサブネットを **us-west-2c を含む**ように拡張（`PUBLIC_SUBNET_IDS_JSON` 更新）。
+
+### 証跡一覧
+- `docs/evidence/20251104_050806_healthz.log`（`HTTP/1.1 200 OK` / `{"ok":true}`）
+- `docs/evidence/20251104_050806_dbcheck.log`（`HTTP/1.1 200 OK` / `{"inserted":true}`）
+- `docs/evidence/<ts>_cloudwatch_healthz.json`（CloudWatch 抜粋）
+- `docs/evidence/<ts>_healthz_json_line.log`（1行JSONサンプル）
+- `docs/evidence/<ts>_cloudtrail_24h.json`（直近24hのCloudTrail）
+- `docs/evidence/<ts>_config_24h.json` または `..._config_recorders.json`
+- （任意）`infra/20-alb/terraform.tfstate`（一時ALB/TGの構成証跡）
+- CI Run: `Papyrus Smoke`（Artifacts: `smoke-<run_id>`）
+
+### ロールアウト
+- **手順**
+  1. CIが作成した PR（`evidence/smoke-<timestamp> -> dev`）をレビューしてマージ。
+  2. アプリ修正を含む場合は `ECR push → ECS force-new-deployment` を実行。
+  3. `Papyrus Smoke` を手動実行し、`/healthz` `/dbcheck` と TG `healthy` を確認。
+- **影響/停止**
+  - スモーク用ALB/TGは一時リソース。アプリの再デプロイ時以外は無停止。
+- **ロールバック**
+  - 直前のタスク定義リビジョンへ戻す（`update-service --force-new-deployment`）。
+  - CI側は PR を Revert すれば `docs/evidence` の差分は元に戻る。
+
+
 ## 2025-10-29
 
 ### 目的
