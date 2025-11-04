@@ -67,9 +67,12 @@ docker compose --env-file .env.dev build --no-cache --progress=plain
 
 #### CloudWatch Alarm監査体制をIaCで構築
 
+検知条件
 - ECS メモリ >80% (平均2/5分)
 - ALB 5xx% >1 (Sum 2/5分)
 - TargetResponseTime p90 >1.5s
+
+以下コマンドを一度のみ実行
 
 ```bash
 cd infra/30-monitor
@@ -80,22 +83,7 @@ terraform apply  -var-file=dev.tfvars -auto-approve \
   | tee "$EVID/$(date +%Y%m%d_%H%M%S)_monitor_tf_apply.log"
 ```
 
-#### AWS CloudTrail & Config 直近 24h をエクスポート
-
-```bash
-EVID=~/papyrus-invoice/docs/evidence
-TS=$(date +%Y%m%d_%H%M%S)
-START=$(date -u -d '24 hours ago' +%Y-%m-%dT%H:%M:%SZ)
-END=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-aws cloudtrail lookup-events \
-  --start-time "$START" --end-time "$END" \
-  > "$EVID/$(date +%Y%m%d_%H%M%S)_cloudtrail_24h.json"
-
-aws configservice describe-configuration-recorders \
-  > "$EVID/$(date +%Y%m%d_%H%M%S)_config_recorders.json" || true
-aws configservice describe-delivery-channels \
-  > "$EVID/$(date +%Y%m%d_%H%M%S)_config_delivery_channels.json" || true
-```
+結果： ![](docs/evidence/20251029_021236_monitor_tf_apply.log)
 
 ### Github Actions CI/CD
 
