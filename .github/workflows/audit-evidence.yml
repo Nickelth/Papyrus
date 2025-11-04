@@ -1,0 +1,66 @@
+name: Audit Evidence
+on: workflow_dispatch
+permissions:
+  id-token: write
+  contents: write
+  pull-requests: write
+
+env:
+  AWS_REGION: us-west-2
+  EVID_DIR: docs/evidence
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: dev, fetch-depth: 0 }
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Export CloudTrail & Config (last 24h)
+        run: |
+          set -euo pipefail
+          mkdir -p "${{ env.EVID_DIR }}"
+          TS=$(date -u +%Y%m%d_%H%M%S)
+          START=$(date -u -d '24 hours ago' +%Y-%m-%dT%H:%M:%SZ)
+          END=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          # 範囲は24hだが、関係あるイベントだけに絞るとサイズとノイズが激減
+          # ELB/ECS/EC2/RDS/SecretsManager に限定
+          aws cloudtrail lookup-events \
+            --start-time "$START" --end-time "$END" \
+          | jq '
+              .Events
+              | map(select(
+                  (.EventSource|test("elasticloadbalancing|ecs|ec2|rds|secretsmanager"))
+                  or (.Resources[]?.ResourceName|tostring|test("papyrus|alb|tg|service|task|sg|subnet|vpc"; "i"))
+                ))
+              | {Events: .}
+            ' > "${{ env.EVID_DIR }}/${TS}_cloudtrail_24h_filtered.json"
+
+          aws configservice describe-configuration-recorders \
+            > "${{ env.EVID_DIR }}/${TS}_config_recorders.json" || true
+          aws configservice describe-delivery-channels \
+            > "${{ env.EVID_DIR }}/${TS}_config_delivery_channels.json" || true
+
+      - name: Create PR to dev
+        env: { GH_TOKEN: ${{ github.token }} }
+        run: |
+          set -euo pipefail
+          TS=$(date -u +%Y%m%d-%H%M%S)
+          BR="evidence/audit-${TS}"
+          git switch -c "$BR"
+          git add "${{ env.EVID_DIR }}"/*.json || true
+          git diff --cached --quiet && { echo "[INFO] nothing to commit"; exit 0; }
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m "audit: CloudTrail/Config 24h (${TS})"
+          git push -u origin "$BR"
+          gh pr create --base dev --head "$BR" \
+            --title "audit: CloudTrail/Config 24h (${TS})" \
+            --body "24h CloudTrail (filtered) & Config snapshots. Region: us-west-2" \
+            --label "evidence,audit" || true
