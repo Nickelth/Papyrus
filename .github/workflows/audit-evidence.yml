@@ -48,7 +48,8 @@ jobs:
             > "${{ env.EVID_DIR }}/${TS}_config_delivery_channels.json" || true
 
       - name: Create PR to dev
-        env: { GH_TOKEN: ${{ github.token }} }
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           TS=$(date -u +%Y%m%d-%H%M%S)
