@@ -28,16 +28,8 @@ papyrus-invoice/
 ├── .env.prd
 ├── infra/
 │   ├── 10-rds/
-│   │   ├── .terraform.lock.hcl
-│   │   ├── main.tf
-│   │   ├── outputs.tf
-│   │   ├── providers.tf
-│   │   ├── variables.tf
-│   │   └── versions.tf
-│   └── 20-alb/
-│       ├── .terraform.lock.hcl
-│       ├── main.tf
-│       └── outputs.tf
+│   ├── 20-alb/
+│   └── 30-monitor/
 ├── papyrus/
 │   ├── blueprints/
 │   │   ├── dbcheck.py
@@ -87,26 +79,31 @@ terraform apply  -var-file=dev.tfvars -auto-approve \
 
 ### Github Actions CI/CD
 
-- `ecr-push.yml`: `master`ブランチデプロイ時に自動実行、ECRイメージを更新。
-- `ecs-deploy.yml`: Actionsで任意実行。ECSタスクをdesire=1にしてサービス起動。
-- `ecs-scale.yml`: Actionsで任意実行。ECSタスクをdesire=0にしてサービス起動。
-- `alb-smoke.yml`: Actionsで任意実行。ALB/TG/SGを作成→疎通→破壊。証跡をリポに追加。
-- `audit-evidence.yml`: Actionsで任意実行。直近24hのCloudTrailとConfigを取得。証跡をリポに追加。
+- **Build & Push to ECR** / `ecr-push.yml`: 
+  - `master`ブランチデプロイ時及びタグ(`v*.*.*`)付与時に自動実行。ECRイメージを更新。
+- **Deploy to ECS Fargate** / `ecs-deploy.yml`: 
+  - Actionsで任意実行。ECSタスクをdesire=1にしてサービス起動。
+- **ECS Scale Service** / `ecs-scale.yml`: 
+  - Actionsで任意実行。ECSタスクをdesire=0にしてサービス起動。
+- **Papyrus Smoke** / `alb-smoke.yml`: 
+  - Actionsで任意実行。ALB/TG/SGを作成→疎通→破壊。証跡をリポジトリに保存。
+- **Audit Evidence** / `audit-evidence.yml`: 
+  - Actionsで任意実行。直近24hのCloudTrailとConfigを取得。証跡をリポジトリに保存。
 
 ### 完成定義
 
-- [x] **ECS→RDS の疎通 OK**（INSERT 0 1 が証跡に残る） 
+- [x] **ECS→RDS の疎通 OK**（INSERT 0 1 が証跡に残る）
 
-- [x] **最小スキーマ適用済み**（init.sql 投入） 
+- [x] **最小スキーマ適用済み**（`init.sql` 投入）
 
-- [x] **観測の入口**として CloudWatch Logs に構造化ログが出ている（JSON1行） 
+- [x] **観測の入口**として CloudWatch Logs に構造化ログが出ている（JSON1行）
 
-- [x] **IaC 薄切り**（RDS/SG/ParameterGroup だけTerraform化。完全Importは後回し） 
+- [x] **IaC 薄切り**（RDS/SG/ParameterGroup だけTerraform化。完全Importは後回し）
 
-- [x] **証跡**：psql 接続ログ、SG設定SS、アプリログに接続成功 
+- [x] **証跡**：`psql` 接続ログ、SG設定SS、アプリログに接続成功 
 
-- [x] **Parameter Group変更の反映証跡**(再起動含む)、トランザクションのログ1件、再試行ロジックの有無 
+- [x] **Parameter Group変更の反映証跡**(再起動含む)、トランザクションのログ1件、再試行ロジックの有無
 
-- [x] **CLI履歴の証跡化**: scriptコマンドかbash -xログ、加えてCloudTrail + Configを記事に添える 
+- [x] **CLI履歴の証跡化**: `script`コマンドか`bash -x`ログ、加えてCloudTrail + Configを記事に添える 
   - `script`コマンド → `alb-smoke.yml`に実装
-  - CloudTrail + Config → `audit-evidence.yml`に実装
+  - CloudTrail + Config → **Papyrus Smoke** / `alb-smoke.yml`に実装
