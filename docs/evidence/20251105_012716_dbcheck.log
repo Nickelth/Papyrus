@@ -1,0 +1,8 @@
+HTTP/1.1 200 OK
+Date: Wed, 05 Nov 2025 01:27:16 GMT
+Content-Type: application/json
+Content-Length: 18
+Connection: keep-alive
+Server: gunicorn
+
+{"inserted":true}
