@@ -53,9 +53,22 @@ papyrus-invoice/
 docker compose --env-file .env.dev build --no-cache --progress=plain
 ```
 
-### CloudWatch Alarm IaC監査
+### 10. RDS起動
 
-リポジトリクローン後、CloudShell上で入力
+Terraformで起動
+
+[10-rds/README](infra/10-rds/README.md)
+
+### 20. ALB スモーク
+
+ALB常時起動は非常に高価なため、Terraform構築→疎通確認→即時破壊のCIを用いてALB接続テストを実施する。
+ECSタスク起動(`desire=1`)、RDS起動が前提となる。
+
+[20-alb/README](infra/20-alb/README.md)
+
+### 30. CloudWatch Alarm IaC監査
+
+リポジトリクローン後、CloudShell上でコマンド入力
 
 #### CloudWatch Alarm監査体制をIaCで構築
 
@@ -75,7 +88,7 @@ terraform apply  -var-file=dev.tfvars -auto-approve \
   | tee "$EVID/$(date +%Y%m%d_%H%M%S)_monitor_tf_apply.log"
 ```
 
-結果： ![](docs/evidence/20251029_021236_monitor_tf_apply.log)
+Terraform構築成功ログ： [monitor_tf_apply.log](docs/evidence/20251029_021236_monitor_tf_apply.log)
 
 ### Github Actions CI/CD
 
