@@ -1,0 +1,220 @@
+[0m[1mrandom_id.suffix: Refreshing state... [id=XSk][0m
+[0m[1maws_security_group.alb: Refreshing state... [id=sg-0aa5858dc4f1cdb4c][0m
+[0m[1maws_lb_target_group.this: Refreshing state... [id=arn:aws:elasticloadbalancing:us-west-2:438336773404:targetgroup/papyrus-tg-5d29/773c30bad835f6ca][0m
+[0m[1maws_lb.this: Refreshing state... [id=arn:aws:elasticloadbalancing:us-west-2:438336773404:loadbalancer/app/papyrus-alb-5d29/ef7d4d9312f8bb3c][0m
+[0m[1maws_lb_listener.http: Refreshing state... [id=arn:aws:elasticloadbalancing:us-west-2:438336773404:listener/app/papyrus-alb-5d29/ef7d4d9312f8bb3c/8fe2d8c97febc23c][0m
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [31m-[0m destroy[0m
+
+Terraform will perform the following actions:
+
+[1m  # aws_lb.this[0m will be [1m[31mdestroyed[0m
+[0m  [31m-[0m[0m resource "aws_lb" "this" {
+      [31m-[0m[0m arn                                         = "arn:aws:elasticloadbalancing:us-west-2:438336773404:loadbalancer/app/papyrus-alb-5d29/ef7d4d9312f8bb3c" [90m-> null[0m[0m
+      [31m-[0m[0m arn_suffix                                  = "app/papyrus-alb-5d29/ef7d4d9312f8bb3c" [90m-> null[0m[0m
+      [31m-[0m[0m client_keep_alive                           = 3600 [90m-> null[0m[0m
+      [31m-[0m[0m desync_mitigation_mode                      = "defensive" [90m-> null[0m[0m
+      [31m-[0m[0m dns_name                                    = "papyrus-alb-5d29-1924086732.us-west-2.elb.amazonaws.com" [90m-> null[0m[0m
+      [31m-[0m[0m drop_invalid_header_fields                  = false [90m-> null[0m[0m
+      [31m-[0m[0m enable_cross_zone_load_balancing            = true [90m-> null[0m[0m
+      [31m-[0m[0m enable_deletion_protection                  = false [90m-> null[0m[0m
+      [31m-[0m[0m enable_http2                                = true [90m-> null[0m[0m
+      [31m-[0m[0m enable_tls_version_and_cipher_suite_headers = false [90m-> null[0m[0m
+      [31m-[0m[0m enable_waf_fail_open                        = false [90m-> null[0m[0m
+      [31m-[0m[0m enable_xff_client_port                      = false [90m-> null[0m[0m
+      [31m-[0m[0m enable_zonal_shift                          = false [90m-> null[0m[0m
+      [31m-[0m[0m id                                          = "arn:aws:elasticloadbalancing:us-west-2:438336773404:loadbalancer/app/papyrus-alb-5d29/ef7d4d9312f8bb3c" [90m-> null[0m[0m
+      [31m-[0m[0m idle_timeout                                = 30 [90m-> null[0m[0m
+      [31m-[0m[0m internal                                    = false [90m-> null[0m[0m
+      [31m-[0m[0m ip_address_type                             = "ipv4" [90m-> null[0m[0m
+      [31m-[0m[0m load_balancer_type                          = "application" [90m-> null[0m[0m
+      [31m-[0m[0m name                                        = "papyrus-alb-5d29" [90m-> null[0m[0m
+      [31m-[0m[0m preserve_host_header                        = false [90m-> null[0m[0m
+      [31m-[0m[0m region                                      = "us-west-2" [90m-> null[0m[0m
+      [31m-[0m[0m security_groups                             = [
+          [31m-[0m[0m "sg-0aa5858dc4f1cdb4c",
+        ] [90m-> null[0m[0m
+      [31m-[0m[0m subnets                                     = [
+          [31m-[0m[0m "subnet-08326af247b075d10",
+          [31m-[0m[0m "subnet-09d851ed375890f2d",
+          [31m-[0m[0m "subnet-0d521901e37cb965e",
+        ] [90m-> null[0m[0m
+      [31m-[0m[0m tags                                        = {} [90m-> null[0m[0m
+      [31m-[0m[0m tags_all                                    = {} [90m-> null[0m[0m
+      [31m-[0m[0m vpc_id                                      = "vpc-0fbda65c351254bb3" [90m-> null[0m[0m
+      [31m-[0m[0m xff_header_processing_mode                  = "append" [90m-> null[0m[0m
+      [31m-[0m[0m zone_id                                     = "Z1H1FL5HABSF5" [90m-> null[0m[0m
+
+      [31m-[0m[0m access_logs {
+          [31m-[0m[0m enabled = false [90m-> null[0m[0m
+        }
+
+      [31m-[0m[0m connection_logs {
+          [31m-[0m[0m enabled = false [90m-> null[0m[0m
+        }
+
+      [31m-[0m[0m subnet_mapping {
+          [31m-[0m[0m subnet_id = "subnet-08326af247b075d10" [90m-> null[0m[0m
+        }
+      [31m-[0m[0m subnet_mapping {
+          [31m-[0m[0m subnet_id = "subnet-09d851ed375890f2d" [90m-> null[0m[0m
+        }
+      [31m-[0m[0m subnet_mapping {
+          [31m-[0m[0m subnet_id = "subnet-0d521901e37cb965e" [90m-> null[0m[0m
+        }
+    }
+
+[1m  # aws_lb_listener.http[0m will be [1m[31mdestroyed[0m
+[0m  [31m-[0m[0m resource "aws_lb_listener" "http" {
+      [31m-[0m[0m arn                                  = "arn:aws:elasticloadbalancing:us-west-2:438336773404:listener/app/papyrus-alb-5d29/ef7d4d9312f8bb3c/8fe2d8c97febc23c" [90m-> null[0m[0m
+      [31m-[0m[0m id                                   = "arn:aws:elasticloadbalancing:us-west-2:438336773404:listener/app/papyrus-alb-5d29/ef7d4d9312f8bb3c/8fe2d8c97febc23c" [90m-> null[0m[0m
+      [31m-[0m[0m load_balancer_arn                    = "arn:aws:elasticloadbalancing:us-west-2:438336773404:loadbalancer/app/papyrus-alb-5d29/ef7d4d9312f8bb3c" [90m-> null[0m[0m
+      [31m-[0m[0m port                                 = 80 [90m-> null[0m[0m
+      [31m-[0m[0m protocol                             = "HTTP" [90m-> null[0m[0m
+      [31m-[0m[0m region                               = "us-west-2" [90m-> null[0m[0m
+      [31m-[0m[0m routing_http_response_server_enabled = true [90m-> null[0m[0m
+      [31m-[0m[0m tags                                 = {} [90m-> null[0m[0m
+      [31m-[0m[0m tags_all                             = {} [90m-> null[0m[0m
+
+      [31m-[0m[0m default_action {
+          [31m-[0m[0m order            = 1 [90m-> null[0m[0m
+          [31m-[0m[0m target_group_arn = "arn:aws:elasticloadbalancing:us-west-2:438336773404:targetgroup/papyrus-tg-5d29/773c30bad835f6ca" [90m-> null[0m[0m
+          [31m-[0m[0m type             = "forward" [90m-> null[0m[0m
+        }
+    }
+
+[1m  # aws_lb_target_group.this[0m will be [1m[31mdestroyed[0m
+[0m  [31m-[0m[0m resource "aws_lb_target_group" "this" {
+      [31m-[0m[0m arn                                = "arn:aws:elasticloadbalancing:us-west-2:438336773404:targetgroup/papyrus-tg-5d29/773c30bad835f6ca" [90m-> null[0m[0m
+      [31m-[0m[0m arn_suffix                         = "targetgroup/papyrus-tg-5d29/773c30bad835f6ca" [90m-> null[0m[0m
+      [31m-[0m[0m deregistration_delay               = "15" [90m-> null[0m[0m
+      [31m-[0m[0m id                                 = "arn:aws:elasticloadbalancing:us-west-2:438336773404:targetgroup/papyrus-tg-5d29/773c30bad835f6ca" [90m-> null[0m[0m
+      [31m-[0m[0m ip_address_type                    = "ipv4" [90m-> null[0m[0m
+      [31m-[0m[0m lambda_multi_value_headers_enabled = false [90m-> null[0m[0m
+      [31m-[0m[0m load_balancer_arns                 = [
+          [31m-[0m[0m "arn:aws:elasticloadbalancing:us-west-2:438336773404:loadbalancer/app/papyrus-alb-5d29/ef7d4d9312f8bb3c",
+        ] [90m-> null[0m[0m
+      [31m-[0m[0m load_balancing_algorithm_type      = "round_robin" [90m-> null[0m[0m
+      [31m-[0m[0m load_balancing_anomaly_mitigation  = "off" [90m-> null[0m[0m
+      [31m-[0m[0m load_balancing_cross_zone_enabled  = "use_load_balancer_configuration" [90m-> null[0m[0m
+      [31m-[0m[0m name                               = "papyrus-tg-5d29" [90m-> null[0m[0m
+      [31m-[0m[0m port                               = 5000 [90m-> null[0m[0m
+      [31m-[0m[0m protocol                           = "HTTP" [90m-> null[0m[0m
+      [31m-[0m[0m protocol_version                   = "HTTP1" [90m-> null[0m[0m
+      [31m-[0m[0m proxy_protocol_v2                  = false [90m-> null[0m[0m
+      [31m-[0m[0m region                             = "us-west-2" [90m-> null[0m[0m
+      [31m-[0m[0m slow_start                         = 0 [90m-> null[0m[0m
+      [31m-[0m[0m tags                               = {} [90m-> null[0m[0m
+      [31m-[0m[0m tags_all                           = {} [90m-> null[0m[0m
+      [31m-[0m[0m target_type                        = "ip" [90m-> null[0m[0m
+      [31m-[0m[0m vpc_id                             = "vpc-0fbda65c351254bb3" [90m-> null[0m[0m
+
+      [31m-[0m[0m health_check {
+          [31m-[0m[0m enabled             = true [90m-> null[0m[0m
+          [31m-[0m[0m healthy_threshold   = 2 [90m-> null[0m[0m
+          [31m-[0m[0m interval            = 10 [90m-> null[0m[0m
+          [31m-[0m[0m matcher             = "200-399" [90m-> null[0m[0m
+          [31m-[0m[0m path                = "/healthz" [90m-> null[0m[0m
+          [31m-[0m[0m port                = "traffic-port" [90m-> null[0m[0m
+          [31m-[0m[0m protocol            = "HTTP" [90m-> null[0m[0m
+          [31m-[0m[0m timeout             = 5 [90m-> null[0m[0m
+          [31m-[0m[0m unhealthy_threshold = 2 [90m-> null[0m[0m
+        }
+
+      [31m-[0m[0m stickiness {
+          [31m-[0m[0m cookie_duration = 86400 [90m-> null[0m[0m
+          [31m-[0m[0m enabled         = false [90m-> null[0m[0m
+          [31m-[0m[0m type            = "lb_cookie" [90m-> null[0m[0m
+        }
+
+      [31m-[0m[0m target_failover {}
+
+      [31m-[0m[0m target_group_health {
+          [31m-[0m[0m dns_failover {
+              [31m-[0m[0m minimum_healthy_targets_count      = "1" [90m-> null[0m[0m
+              [31m-[0m[0m minimum_healthy_targets_percentage = "off" [90m-> null[0m[0m
+            }
+          [31m-[0m[0m unhealthy_state_routing {
+              [31m-[0m[0m minimum_healthy_targets_count      = 1 [90m-> null[0m[0m
+              [31m-[0m[0m minimum_healthy_targets_percentage = "off" [90m-> null[0m[0m
+            }
+        }
+
+      [31m-[0m[0m target_health_state {}
+    }
+
+[1m  # aws_security_group.alb[0m will be [1m[31mdestroyed[0m
+[0m  [31m-[0m[0m resource "aws_security_group" "alb" {
+      [31m-[0m[0m arn                    = "arn:aws:ec2:us-west-2:438336773404:security-group/sg-0aa5858dc4f1cdb4c" [90m-> null[0m[0m
+      [31m-[0m[0m description            = "ALB SG" [90m-> null[0m[0m
+      [31m-[0m[0m egress                 = [
+          [31m-[0m[0m {
+              [31m-[0m[0m cidr_blocks      = [
+                  [31m-[0m[0m "0.0.0.0/0",
+                ]
+              [31m-[0m[0m description      = ""
+              [31m-[0m[0m from_port        = 0
+              [31m-[0m[0m ipv6_cidr_blocks = []
+              [31m-[0m[0m prefix_list_ids  = []
+              [31m-[0m[0m protocol         = "-1"
+              [31m-[0m[0m security_groups  = []
+              [31m-[0m[0m self             = false
+              [31m-[0m[0m to_port          = 0
+            },
+        ] [90m-> null[0m[0m
+      [31m-[0m[0m id                     = "sg-0aa5858dc4f1cdb4c" [90m-> null[0m[0m
+      [31m-[0m[0m ingress                = [
+          [31m-[0m[0m {
+              [31m-[0m[0m cidr_blocks      = [
+                  [31m-[0m[0m "0.0.0.0/0",
+                ]
+              [31m-[0m[0m description      = "HTTP from allowed CIDRs"
+              [31m-[0m[0m from_port        = 80
+              [31m-[0m[0m ipv6_cidr_blocks = []
+              [31m-[0m[0m prefix_list_ids  = []
+              [31m-[0m[0m protocol         = "tcp"
+              [31m-[0m[0m security_groups  = []
+              [31m-[0m[0m self             = false
+              [31m-[0m[0m to_port          = 80
+            },
+        ] [90m-> null[0m[0m
+      [31m-[0m[0m name                   = "papyrus-alb-sg-5d29" [90m-> null[0m[0m
+      [31m-[0m[0m owner_id               = "438336773404" [90m-> null[0m[0m
+      [31m-[0m[0m region                 = "us-west-2" [90m-> null[0m[0m
+      [31m-[0m[0m revoke_rules_on_delete = false [90m-> null[0m[0m
+      [31m-[0m[0m tags                   = {} [90m-> null[0m[0m
+      [31m-[0m[0m tags_all               = {} [90m-> null[0m[0m
+      [31m-[0m[0m vpc_id                 = "vpc-0fbda65c351254bb3" [90m-> null[0m[0m
+    }
+
+[1m  # random_id.suffix[0m will be [1m[31mdestroyed[0m
+[0m  [31m-[0m[0m resource "random_id" "suffix" {
+      [31m-[0m[0m b64_std     = "XSk=" [90m-> null[0m[0m
+      [31m-[0m[0m b64_url     = "XSk" [90m-> null[0m[0m
+      [31m-[0m[0m byte_length = 2 [90m-> null[0m[0m
+      [31m-[0m[0m dec         = "23849" [90m-> null[0m[0m
+      [31m-[0m[0m hex         = "5d29" [90m-> null[0m[0m
+      [31m-[0m[0m id          = "XSk" [90m-> null[0m[0m
+    }
+
+[1mPlan:[0m 0 to add, 0 to change, 5 to destroy.
+[0m
+Changes to Outputs:
+  [31m-[0m[0m alb_dns_name = "papyrus-alb-5d29-1924086732.us-west-2.elb.amazonaws.com" [90m-> null[0m[0m
+  [31m-[0m[0m alb_sg_id    = "sg-0aa5858dc4f1cdb4c" [90m-> null[0m[0m
+  [31m-[0m[0m tg_arn       = "arn:aws:elasticloadbalancing:us-west-2:438336773404:targetgroup/papyrus-tg-5d29/773c30bad835f6ca" [90m-> null[0m[0m
+[0m[1maws_lb_listener.http: Destroying... [id=arn:aws:elasticloadbalancing:us-west-2:438336773404:listener/app/papyrus-alb-5d29/ef7d4d9312f8bb3c/8fe2d8c97febc23c][0m[0m
+[0m[1maws_lb_listener.http: Destruction complete after 0s[0m
+[0m[1maws_lb_target_group.this: Destroying... [id=arn:aws:elasticloadbalancing:us-west-2:438336773404:targetgroup/papyrus-tg-5d29/773c30bad835f6ca][0m[0m
+[0m[1maws_lb.this: Destroying... [id=arn:aws:elasticloadbalancing:us-west-2:438336773404:loadbalancer/app/papyrus-alb-5d29/ef7d4d9312f8bb3c][0m[0m
+[0m[1maws_lb_target_group.this: Destruction complete after 0s[0m
+[0m[1maws_lb.this: Destruction complete after 9s[0m
+[0m[1maws_security_group.alb: Destroying... [id=sg-0aa5858dc4f1cdb4c][0m[0m
+[0m[1maws_security_group.alb: Destruction complete after 6s[0m
+[0m[1mrandom_id.suffix: Destroying... [id=XSk][0m[0m
+[0m[1mrandom_id.suffix: Destruction complete after 0s[0m
+[0m[1m[32m
+Destroy complete! Resources: 5 destroyed.
+[0m

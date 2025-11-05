@@ -1,0 +1,28 @@
+{
+    "Listeners": [
+        {
+            "ListenerArn": "arn:aws:elasticloadbalancing:us-west-2:438336773404:listener/app/papyrus-alb-5d29/ef7d4d9312f8bb3c/8fe2d8c97febc23c",
+            "LoadBalancerArn": "arn:aws:elasticloadbalancing:us-west-2:438336773404:loadbalancer/app/papyrus-alb-5d29/ef7d4d9312f8bb3c",
+            "Port": 80,
+            "Protocol": "HTTP",
+            "DefaultActions": [
+                {
+                    "Type": "forward",
+                    "TargetGroupArn": "arn:aws:elasticloadbalancing:us-west-2:438336773404:targetgroup/papyrus-tg-5d29/773c30bad835f6ca",
+                    "Order": 1,
+                    "ForwardConfig": {
+                        "TargetGroups": [
+                            {
+                                "TargetGroupArn": "arn:aws:elasticloadbalancing:us-west-2:438336773404:targetgroup/papyrus-tg-5d29/773c30bad835f6ca",
+                                "Weight": 1
+                            }
+                        ],
+                        "TargetGroupStickinessConfig": {
+                            "Enabled": false
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}
