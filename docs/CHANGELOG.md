@@ -1,4 +1,43 @@
-## 2025-11-03  (Papyrus Invoice)
+## 2025-11-04
+
+### 目的
+- スモーク検証（ALB→ECS→RDS）の**証跡を最小構成で自動収集**し、`dev` へ PR 化。
+- 監査用途（CloudTrail/Config）の**24hエクスポートを別ワークフローに分離**して、ノイズ/権限起因の失敗を排除。
+- CIの一時資材や冗長ダンプを削減し、**読みやすいエビデンスだけ**を残す。
+
+### 変更内容（前回からの差分）
+- **ワークフロー**
+  - 新規：`Audit Evidence`（手動トリガ）。CloudTrail/Config の24hスナップショットを収集し `dev` 宛 PR。
+  - 改修：`Papyrus Smoke`
+    - `docs/evidence` への**統一出力**（`EVID_DIR`）。  
+    - **CloudWatch Logs の1行JSON**を `/healthz` `/dbcheck` について自動収集（`if: always()`）。
+    - **AZミスマッチ検知**（ALB有効AZとタスクAZの不一致をFail化）。
+    - **カスタム wait healthy**（`describe-target-health` で120秒待機）。
+    - **SG重複回避**（`InvalidPermission.Duplicate` を握って続行）。
+    - **Listener冪等更新**（DuplicateListenerに強い張り替え処理）。
+    - **tfstateのアップロードを廃止**、デバッグ用アーティファクト/ダンプ類を削減。
+    - 証跡PR：`evidence/smoke-<timestamp>` ブランチ → **dev宛PR自動作成**。`*.log`/`*.json` をコミット。
+    - 細部修正：`dev.auto.tfvars` を plan/apply の参照名と一致させる、`$EVID` を廃止し `EVID_DIR` に統一。
+- **IAM（必要権限の追加）**
+  - **CloudWatch Logs 読み取り**：`logs:FilterLogEvents` ほか。
+  - **CloudTrail 読み取り**：`cloudtrail:LookupEvents` ほか。
+  - いずれも GitHub Actions 実行ロールに付与（最小権限 or 管理ポリシー）。
+
+### 証跡一覧（代表）
+- `docs/evidence/<ts>_healthz.log`（HTTP 200 / `{"ok":true}`）
+- `docs/evidence/<ts>_dbcheck.log`（HTTP 200 / `{"ok":true,"inserted":true}` 等）
+- `docs/evidence/<ts>_cloudwatch_healthz.json` / `<ts>_cloudwatch_dbcheck.json`
+- `docs/evidence/<ts>_healthz_json_line.log` / `<ts>_dbcheck_json_line.log`
+- （Audit Evidence）`docs/evidence/<ts>_cloudtrail_24h_filtered.json`  
+  `docs/evidence/<ts>_config_recorders.json` / `_config_delivery_channels.json`
+
+### ロールアウト / 影響
+- `Papyrus Smoke`：手動実行→`docs/evidence` に証跡出力→**devへPR**（レビュー後マージ）。
+- `Audit Evidence`：必要時のみ手動実行し、監査用JSONをPR化。
+- 既存本番リソースへの影響：なし（スモーク用ALB/TGは毎回作成・破棄）。
+- ロールバック：不要（PRをRevertすれば証跡のみ戻る）。
+
+## 2025-11-03
 
 ### 目的
 - **観測の入口**を固定化し、/healthz と /dbcheck の到達性を数値で示す。

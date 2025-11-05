@@ -181,6 +181,10 @@ curl -si "http://$DNS/dbcheck" \
 本ステップで取得した `-_healthz.log` および `-_dbcheck.log` は CI のアーティファクトとして保存する。
 将来的に「実際に ALB 経由でアプリケーションが稼働し、DB トランザクションも成立していた」という説明を行う際の根拠となる。
 
+証跡：
+- [20251104_050806_healthz](../../docs/evidence/20251104_050806_healthz.log)
+- [20251104_050806_dbcheck](../../docs/evidence/20251104_050806_dbcheck.log)
+
 ### 6. Terraform destroy によるリソース削除 (コスト回避)
 
 最後に、ALB / Target Group / Listener / Security Group を削除する。
