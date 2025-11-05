@@ -90,6 +90,8 @@ terraform apply -auto-approve -var-file=dev.tfvars \
 
 `terraform apply` のログは、以下の監査証跡として保管する。
 
+証跡：[20251021_014118_papyrus_tf_apply.log](../../docs/evidence/20251021_014118_papyrus_tf_apply.log)
+
 - パラメータの変更内容
 - RDS の再起動有無とそのタイムスタンプ
 
@@ -100,11 +102,11 @@ EP=$(terraform output -raw rds_endpoint)
 PORT=$(terraform output -raw rds_port)
 
 TS=$(date +%Y%m%d_%H%M%S)
-echo "$EP:$PORT" \
-  | tee $EVID/$(date +%Y%m%d_%H%M%S)_papyrus_rds_endpoint.log
+echo "$EP:$PORT"
 ```
 
 ここで取得した `host` / `port` は Secrets Manager (`papyrus/prd/db`) に登録されるべき値になる。
+影響度は低いが、エンドポイントは攻撃面の足掛かりになりうるため、証跡としては残さない。
 
 ### 3. スキーマ投入のドライラン (DRY RUN)
 
@@ -150,6 +152,8 @@ PY'" \
 期待される出力例:
 `CLI INSERT ROW: ('SKU-CLI', 'health', 0)`
 
+成功ログ：[20251021_052218_papyrus_psql_insert_cli.log](../../docs/evidence/20251021_052218_papyrus_psql_insert_cli.log)
+
 (2) アプリケーション経由 (`/dbcheck` ルート)
 
 `papyrus.blueprints.dbcheck` の `/dbcheck` エンドポイントでは、Flask 側のコネクションプールを経由して INSERT を実行する。
@@ -157,7 +161,7 @@ PY'" \
 
 - ALB のスモークテスト時に `/dbcheck` へ `curl` し、HTTP 200 と `{"inserted": true}` が返ることを確認済み
 - 証跡ファイル例:
-  `20251028_080820_dbcheck.log`
+  [20251104_050806_dbcheck.log](../../docs/evidence/20251104_050806_dbcheck.log)
 
 (3) 両経路の書き込み結果を確認
 
@@ -187,6 +191,8 @@ PY'" \
 - ECS タスクから RDS に対し、TLS 必須接続で INSERT が行えること
 - CLI 経路およびアプリケーション経路の双方で DB 書き込みが成功していること
 - すべての手順と結果の証跡ログが `docs/evidence` に保存されていること
+
+成功ログ：[20251028_074758_papyrus_sku_check](../../docs/evidence/20251028_074758_papyrus_sku_check.log)
 
 ---
 
