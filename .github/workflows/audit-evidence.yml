@@ -1,4 +1,4 @@
-name: Audit Evidence
+name: CloudTrail & Config (last 24h)
 on: workflow_dispatch
 permissions:
   id-token: write

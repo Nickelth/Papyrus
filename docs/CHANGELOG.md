@@ -5,7 +5,7 @@
 - 監査用途（CloudTrail/Config）の**24hエクスポートを別ワークフローに分離**して、ノイズ/権限起因の失敗を排除。
 - CIの一時資材や冗長ダンプを削減し、**読みやすいエビデンスだけ**を残す。
 
-### 変更内容（前回からの差分）
+### 変更内容
 - **ワークフロー**
   - 新規：`Audit Evidence`（手動トリガ）。CloudTrail/Config の24hスナップショットを収集し `dev` 宛 PR。
   - 改修：`Papyrus Smoke`
@@ -23,7 +23,7 @@
   - **CloudTrail 読み取り**：`cloudtrail:LookupEvents` ほか。
   - いずれも GitHub Actions 実行ロールに付与（最小権限 or 管理ポリシー）。
 
-### 証跡一覧（代表）
+### 証跡一覧
 - `docs/evidence/<ts>_healthz.log`（HTTP 200 / `{"ok":true}`）
 - `docs/evidence/<ts>_dbcheck.log`（HTTP 200 / `{"ok":true,"inserted":true}` 等）
 - `docs/evidence/<ts>_cloudwatch_healthz.json` / `<ts>_cloudwatch_dbcheck.json`
