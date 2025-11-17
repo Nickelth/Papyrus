@@ -7,6 +7,7 @@ RDSから商品情報を取得し、GUI上の納品リストから納品書をPD
 [![ECS Scaling](https://github.com/Nickelth/papyrus-invoice/actions/workflows/ecs-scale.yml/badge.svg)](../../actions)
 [![ALB Smoke](https://github.com/Nickelth/papyrus-invoice/actions/workflows/alb-smoke.yml/badge.svg)](../../actions)
 [![Audit Evidence](https://github.com/Nickelth/papyrus-invoice/actions/workflows/audit-evidence.yml/badge.svg)](../../actions)
+[![RDS Snapshot & Restore Drill](https://github.com/Nickelth/papyrus-invoice/actions/workflows/rds-snapshot.yml/badge.svg)](../../actions)
 
 ### ルール
 
@@ -100,7 +101,7 @@ Terraform構築成功ログ： [monitor_tf_apply.log](docs/evidence/20251029_021
   - Actionsで任意実行。ECSタスクをdesire=0にしてサービス起動。
 - **Papyrus Smoke** / `alb-smoke.yml`: 
   - Actionsで任意実行。ALB/TG/SGを作成→疎通→破壊。証跡をリポジトリに保存。
-- **Audit Evidence** / `audit-evidence.yml`: 
+- **CloudTrail & Config (last 24h)** / `audit-evidence.yml`: 
   - Actionsで任意実行。直近24hのCloudTrailとConfigを取得。証跡をリポジトリに保存。
 
 ### 完成定義
