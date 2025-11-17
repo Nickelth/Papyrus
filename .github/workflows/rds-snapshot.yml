@@ -1,0 +1,132 @@
+name: RDS Snapshot & Restore Drill
+on: workflow_dispatch
+permissions:
+  id-token: write
+  contents: write
+  pull-requests: write
+concurrency:
+  group: rds-restore-drill
+  cancel-in-progress: true
+
+env:
+  AWS_REGION: us-west-2
+  DB_INSTANCE_ID: papyrus-pg16-dev
+  TEMP_SUFFIX: restore
+  EVID_DIR: docs/evidence
+
+jobs:
+  drill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: dev, fetch-depth: 0 }
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Create manual snapshot
+        id: snap
+        run: |
+          set -euo pipefail
+          TS=$(date -u +%Y%m%d-%H%M%S)
+          SNAP="${DB_INSTANCE_ID}-manual-${TS}"
+          aws rds create-db-snapshot \
+            --db-instance-identifier "${DB_INSTANCE_ID}" \
+            --db-snapshot-identifier "$SNAP" \
+            | tee "${EVID_DIR}/$(date +%Y%m%d_%H%M%S)_rds_snapshot_start.json"
+          aws rds wait db-snapshot-available --db-snapshot-identifier "$SNAP"
+          aws rds describe-db-snapshots --db-snapshot-identifier "$SNAP" \
+            > "${EVID_DIR}/$(date +%Y%m%d_%H%M%S)_rds_snapshot_facts.json"
+          echo "snap_id=$SNAP" >> $GITHUB_OUTPUT
+          echo "[INFO] snapshot ready: $SNAP"
+
+      - name: Restore temporary instance
+        id: restore
+        run: |
+          set -euo pipefail
+          TS=$(date -u +%Y%m%d-%H%M%S)
+          SRC="${DB_INSTANCE_ID}"
+          SNAP="${{ steps.snap.outputs.snap_id }}"
+          TEMP_ID="${SRC}-${TEMP_SUFFIX}-${TS}"
+          echo "temp_id=$TEMP_ID" >> $GITHUB_OUTPUT
+
+          SUBNET_GRP=$(aws rds describe-db-instances --db-instance-identifier "$SRC" \
+            --query 'DBInstances[0].DBSubnetGroup.DBSubnetGroupName' --output text)
+          VPC_SG=$(aws rds describe-db-instances --db-instance-identifier "$SRC" \
+            --query 'DBInstances[0].VpcSecurityGroups[0].VpcSecurityGroupId' --output text)
+          PG=$(aws rds describe-db-instances --db-instance-identifier "$SRC" \
+            --query 'DBInstances[0].DBParameterGroups[0].DBParameterGroupName' --output text)
+          KMS=$(aws rds describe-db-instances --db-instance-identifier "$SRC" \
+            --query 'DBInstances[0].KmsKeyId' --output text)
+
+          aws rds restore-db-instance-from-db-snapshot \
+            --db-instance-identifier "$TEMP_ID" \
+            --db-snapshot-identifier "$SNAP" \
+            --db-subnet-group-name "$SUBNET_GRP" \
+            --vpc-security-group-ids "$VPC_SG" \
+            --db-parameter-group-name "$PG" \
+            $( [ "$KMS" != "None" ] && echo --kms-key-id "$KMS" ) \
+            --no-publicly-accessible \
+            --copy-tags-to-snapshot \
+            | tee "${EVID_DIR}/$(date +%Y%m%d_%H%M%S)_rds_restore_start.json"
+
+      - name: Wait available & capture facts
+        id: facts
+        run: |
+          set -euo pipefail
+          TEMP_ID="${{ steps.restore.outputs.temp_id }}"
+          START=$(date +%s)
+          aws rds wait db-instance-available --db-instance-identifier "$TEMP_ID"
+          END=$(date +%s); TOOK=$((END-START))
+          EP=$(aws rds describe-db-instances --db-instance-identifier "$TEMP_ID" \
+             --query 'DBInstances[0].Endpoint.Address' --output text)
+          PORT=$(aws rds describe-db-instances --db-instance-identifier "$TEMP_ID" \
+             --query 'DBInstances[0].Endpoint.Port' --output text)
+          CACERT=$(aws rds describe-db-instances --db-instance-identifier "$TEMP_ID" \
+             --query 'DBInstances[0].CACertificateIdentifier' --output text)
+          jq -n --arg id "$TEMP_ID" --arg ep "$EP" --arg port "$PORT" --arg dur "$TOOK" --arg cacert "$CACERT" '{
+            temp_instance:$id,
+            endpoint:($ep|sub("[^\\.]+\\.[^\\.]+\\.(us-west-2|rds)\\..*"; "****.****.us-west-2.rds.amazonaws.com")),
+            port:($port|tonumber),
+            restore_seconds:($dur|tonumber),
+            ca:$cacert }' \
+            | tee "${EVID_DIR}/$(date +%Y%m%d_%H%M%S)_rds_restore_facts.json"
+
+          aws rds describe-db-instances --db-instance-identifier "$TEMP_ID" \
+            --query 'DBInstances[0].DBParameterGroups' \
+            > "${EVID_DIR}/$(date +%Y%m%d_%H%M%S)_rds_pg_applied.json"
+
+      - name: Teardown temporary instance
+        if: always()
+        run: |
+          set -euo pipefail
+          TEMP_ID="${{ steps.restore.outputs.temp_id || '' }}"
+          if [ -n "$TEMP_ID" ]; then
+            aws rds delete-db-instance --db-instance-identifier "$TEMP_ID" --skip-final-snapshot \
+              | tee "${EVID_DIR}/$(date +%Y%m%d_%H%M%S)_rds_restore_delete.json"
+            aws rds wait db-instance-deleted --db-instance-identifier "$TEMP_ID" || true
+          else
+            echo "[INFO] nothing to delete"
+          fi
+
+      - name: PR evidence to dev
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TS=$(date -u +%Y%m%d-%H%M%S); BR="evidence/rds-drill-${TS}"
+          git fetch origin dev && git checkout dev && git pull --ff-only
+          git switch -c "$BR"
+          git add "${EVID_DIR}"/*rds_snapshot_*.json "${EVID_DIR}"/*rds_restore*.json "${EVID_DIR}"/*rds_pg_applied.json || true
+          git diff --cached --quiet && { echo "[INFO] nothing to commit"; exit 0; }
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m "evidence: RDS snapshot&restore drill ${TS}"
+          git push -u origin "$BR"
+          gh pr create --base dev --head "$BR" \
+            --title "evidence: RDS snapshot & restore drill ${TS}" \
+            --body "Created manual snapshot, restored temporary instance, captured facts (RTO/endpoint/CA/PG), and deleted temp DB." \
+            --label "evidence,automation"
