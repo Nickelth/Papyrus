@@ -121,3 +121,5 @@ Terraform構築成功ログ： [monitor_tf_apply.log](docs/evidence/20251029_021
 - [x] **CLI履歴の証跡化**: `script`コマンドか`bash -x`ログ、加えてCloudTrail + Configを記事に添える 
   - `script`コマンド → `alb-smoke.yml`に実装
   - CloudTrail + Config → **Papyrus Smoke** / `alb-smoke.yml`に実装
+
+  ![AWSアーキテクチャ構成図](./invoice-aws-architect.drawio.svg)

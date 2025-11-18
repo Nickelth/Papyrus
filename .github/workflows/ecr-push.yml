@@ -1,7 +1,3 @@
-# .github/workflows/ecr-push.yml
-# Build Docker image and push to Amazon ECR on push to main and tags
-# AWS secrets are stored in GitHub Secrets, non-sensitive constants in Repository Variables.
-
 name: Build & Push to ECR
 
 on:
@@ -11,8 +7,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  id-token: write   # for OIDC auth to AWS
-  contents: read    # to checkout code
+  id-token: write
+  contents: read
   packages: read
 
 concurrency:
@@ -20,8 +16,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  AWS_REGION: ${{ vars.AWS_REGION }}            # Variables: safe to expose
-  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}    # Variables: safe to expose
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
   IMAGE_NAME: ${{ vars.ECR_REPOSITORY }}
 
 jobs:
@@ -45,11 +41,10 @@ jobs:
           # JWTのpayloadをbase64url decodeして sub/aud を表示
           echo "$TOKEN" | jq -R 'split(".")[1] | @base64d | fromjson | {sub,aud}'
 
-      # --- Auth to AWS via OIDC (no static keys) ---
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }} # Secrets: sensitive
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
             
       - name: Who am I
@@ -98,11 +93,3 @@ jobs:
         run: |
           IMAGE_URI="${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}"
           echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT
-
-# --- Optional: Static keys fallback (NOT recommended) ---
-#      - name: Configure AWS credentials (static keys)
-#        uses: aws-actions/configure-aws-credentials@v4
-#        with:
-#          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#          aws-region: ${{ env.AWS_REGION }}
