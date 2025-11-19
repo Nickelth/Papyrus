@@ -98,7 +98,7 @@ Terraform構築成功ログ： [monitor_tf_apply.log](docs/evidence/20251029_021
 - **Deploy to ECS Fargate** / `ecs-deploy.yml`: 
   - Actionsで任意実行。ECSタスクをdesire=1にしてサービス起動。
 - **ECS Scale Service** / `ecs-scale.yml`: 
-  - Actionsで任意実行。ECSタスクをdesire=0にしてサービス起動。
+  - Actionsで任意実行。ECSタスクをdesire=0にしてサービス停止。
 - **Papyrus Smoke** / `alb-smoke.yml`: 
   - Actionsで任意実行。ALB/TG/SGを作成→疎通→破壊。証跡をリポジトリに保存。
 - **CloudTrail & Config (last 24h)** / `audit-evidence.yml`: 

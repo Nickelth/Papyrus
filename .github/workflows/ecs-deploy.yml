@@ -21,7 +21,7 @@ env:
   ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
   ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
   ECS_SERVICE: ${{ vars.ECS_SERVICE }}
-  CONTAINER_NAME: ${{ vars.CONTAINER_NAME }} # e.g., app
+  CONTAINER_NAME: ${{ vars.CONTAINER_NAME }}
   TASK_FAMILY: ${{ vars.TASK_FAMILY }}
 
 jobs:
