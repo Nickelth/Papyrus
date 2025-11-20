@@ -129,4 +129,5 @@ Terraform構築成功ログ： [monitor_tf_apply.log](docs/evidence/20251029_021
 **Q1.** Publicサブネットは2a/2b/2cの3AZに対してPrivateサブネットは2a/2bの2AZで不一致なのはなぜ？
 
 **A1.** ALB疎通改善のためにAZ Cを有効化し、publicを3AZにした。privateは2AZ冗長で十分なので意図的に2AZ止まり。
-[20251031-ADR](./docs/20251031-ADR.md)
+
+参考：[20251031-ADR](./docs/20251031-ADR.md)
