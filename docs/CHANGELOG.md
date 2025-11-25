@@ -24,12 +24,12 @@
   - いずれも GitHub Actions 実行ロールに付与（最小権限 or 管理ポリシー）。
 
 ### 証跡一覧
-- `docs/evidence/<ts>_healthz.log`（HTTP 200 / `{"ok":true}`）
-- `docs/evidence/<ts>_dbcheck.log`（HTTP 200 / `{"ok":true,"inserted":true}` 等）
-- `docs/evidence/<ts>_cloudwatch_healthz.json` / `<ts>_cloudwatch_dbcheck.json`
-- `docs/evidence/<ts>_healthz_json_line.log` / `<ts>_dbcheck_json_line.log`
-- （Audit Evidence）`docs/evidence/<ts>_cloudtrail_24h_filtered.json`  
-  `docs/evidence/<ts>_config_recorders.json` / `_config_delivery_channels.json`
+- `docs/evidence/20251105_012716_healthz.log`（HTTP 200 / `{"ok":true}`）
+- `docs/evidence/20251105_012716_dbcheck.log`（HTTP 200 / `{"ok":true,"inserted":true}` 等）
+- `docs/evidence/20251105_012716_cloudwatch_healthz.json` / `20251105_012716_cloudwatch_dbcheck.json`
+- `docs/evidence/20251105_012716_healthz_json_line.log` / `20251105_012716_dbcheck_json_line.log`
+- （Audit Evidence）`docs/evidence/20251105_012716_cloudtrail_24h_filtered.json`  
+  `docs/evidence/20251105_012716_config_recorders.json` / `_config_delivery_channels.json`
 
 ### ロールアウト / 影響
 - `Papyrus Smoke`：手動実行→`docs/evidence` に証跡出力→**devへPR**（レビュー後マージ）。
@@ -64,10 +64,10 @@
 ### 証跡一覧
 - `docs/evidence/20251104_050806_healthz.log`（`HTTP/1.1 200 OK` / `{"ok":true}`）
 - `docs/evidence/20251104_050806_dbcheck.log`（`HTTP/1.1 200 OK` / `{"inserted":true}`）
-- `docs/evidence/<ts>_cloudwatch_healthz.json`（CloudWatch 抜粋）
-- `docs/evidence/<ts>_healthz_json_line.log`（1行JSONサンプル）
-- `docs/evidence/<ts>_cloudtrail_24h.json`（直近24hのCloudTrail）
-- `docs/evidence/<ts>_config_24h.json` または `..._config_recorders.json`
+- `docs/evidence/20251105_010050_cloudwatch_healthz.json`（CloudWatch 抜粋）
+- `docs/evidence/20251105_010050_healthz_json_line.log`（1行JSONサンプル）
+- `docs/evidence/20251105_010050_cloudtrail_24h.json`（直近24hのCloudTrail）
+- `docs/evidence/20251105_010050_config_24h.json` (直近24hのConfig)
 - （任意）`infra/20-alb/terraform.tfstate`（一時ALB/TGの構成証跡）
 - CI Run: `Papyrus Smoke`（Artifacts: `smoke-<run_id>`）
 
